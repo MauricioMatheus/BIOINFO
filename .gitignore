@@ -1,0 +1,6 @@
+/Quality Control 2.py
+*.h5ad
+*.csv
+*.mtx
+*.tsv
+__pycache__/
