@@ -4,3 +4,5 @@
 *.mtx
 *.tsv
 __pycache__/
+h5ad/
+.venv/
