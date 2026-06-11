@@ -3,6 +3,10 @@
 *.csv
 *.mtx
 *.tsv
+*.rds
+*.h5Seurat
+*.csv
 __pycache__/
 h5ad/
 .venv/
+.venv_scrna
