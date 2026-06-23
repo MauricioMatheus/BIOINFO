@@ -2,10 +2,10 @@
 *.h5ad
 *.csv
 *.mtx
-*.tsv
 *.rds
 *.h5Seurat
 *.csv
+*.vcf
 __pycache__/
 h5ad/
 .venv/
