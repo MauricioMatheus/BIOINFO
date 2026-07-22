@@ -4,10 +4,10 @@
 *.mtx
 *.rds
 *.h5Seurat
-*.csv
 *.vcf
 __pycache__/
 h5ad/
 .venv/
 .venv_scrna/
 .vscode/
+/sea_ad.vcf
