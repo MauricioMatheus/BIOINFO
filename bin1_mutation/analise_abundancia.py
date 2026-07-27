@@ -1,12 +1,12 @@
 import numpy as np
 import scanpy as sc
+import scanpy.external as sce
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from pyclustree import clustree
 from sklearn.metrics import adjusted_rand_score
-from pydeseq2.dds import DeseqDataSet
-from pydeseq2.ds import DeseqStats
+from scipy.stats import mannwhitneyu # cálculo do p-valor baseado nas proporções.
 
 adata = sc.read_h5ad("bin1_mutation/BIN1_Mutation.h5ad")
 
@@ -41,8 +41,8 @@ for marcador in marcadores_clinicos:
         plt.xlabel(marcador)
         plt.tight_layout()
         nome_arquivo = marcador.replace('.', '_').replace(' ', '_')
-        plt.savefig(f"bin1_mutation/figures/heatmap_{nome_arquivo}_bin1.png", dpi=300, bbox_inches="tight")
-        plt.show()
+        plt.savefig(f"bin1_mutation/figures/homozigotos/heatmap_{nome_arquivo}_bin1.png", dpi=300, bbox_inches="tight")
+        #plt.show()
     else:
         print(f"A coluna '{marcador}' não foi encontrada em adata.obs")
 
@@ -52,7 +52,14 @@ for marcador in marcadores_clinicos:
 
 # Certifica que o PCA e os vizinhos estão calculados (caso não venham prontos do R)
 sc.pp.pca(adata)
-sc.pp.neighbors(adata)
+
+print("Iniciando integração com Harmony... ")
+
+# Usando donor_id como chave de lote
+
+sce.pp.harmony_integrate(adata, key='donor_id')
+
+sc.pp.neighbors(adata, use_rep='X_pca_harmony') # Use reprentative
 
 resolucoes = [0.05, 0.1, 0.15, 0.175, 0.2, 0.25]
 for res in resolucoes:
@@ -71,8 +78,8 @@ clustree(
     title="Estabilidade dos Clusters (Fine Tuning) - Micróglias"
 )
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/Fine Tuning da Estabilidade dos Clusters - Micróglias.png", dpi=300, bbox_inches="tight" )
-plt.show()
+plt.savefig("bin1_mutation/figures/homozigotos/Fine Tuning da Estabilidade dos Clusters - Micróglias.png", dpi=300, bbox_inches="tight" )
+#plt.show()
 
 #=============================================================
 # ETAPA 3: Prova de Fidelidade Biológica (ARI)
@@ -112,8 +119,8 @@ plt.title(f"Correspondência: Leiden {res_vencedora} vs SEA_AD Supertype (%)")
 plt.xlabel(f"Clusters Leiden (Resolução {res_vencedora})")
 plt.ylabel("Anotação Original SEA-AD (Supertype)")
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/Heatmap_Contigencia_Best_Resolution.png", dpi=300, bbox_inches="tight")
-plt.show()
+plt.savefig("bin1_mutation/figures/homozigotos/Heatmap_Contigencia_Best_Resolution.png", dpi=300, bbox_inches="tight")
+#plt.show()
 
 #A resolução Ideal é 0.15
 
@@ -124,10 +131,10 @@ plt.show()
 sc.tl.umap(adata)
 
 clusters = {
-    '0': 'Homeostática 1 (Repouso)',
-    '1': 'Homeostática 2',
-    '2': 'Subpopulação (DOCK4+)',
-    '3': 'Estado DAM (SPP1+)',
+    '0': 'Micróglia Homeostática Basal (ADAM7-AS1+, DLEU7+)',
+    '1': 'Micróglia Homeostática Fagocítica (FRMD4A+, PLXDC2+)',
+    '2': 'Micróglia Associada à Doença - DAM (SPP1+, FTH1+)',
+    '3': 'Micróglia Ativada por Estresse Metabólico (HIF1A+, SPP1+)',
 }
 
 # Mapeando os nomes matemáticos para uma nova coluna biológica
@@ -140,8 +147,8 @@ sc.pl.umap(
     palette='Set1',
     show=False
 )
-plt.savefig("bin1_mutation/figures/UMAP_Anotado.png", dpi=300, bbox_inches="tight")
-plt.show()
+plt.savefig("bin1_mutation/figures/homozigotos/UMAP_Anotado.png", dpi=300, bbox_inches="tight")
+#plt.show()
 
 #=============================================================
 # ETAPA 5: Anotação Celular e Limpeza de Ruído 
@@ -180,8 +187,8 @@ sc.pl.rank_genes_groups_dotplot(
     show=False 
 )
 
-plt.savefig("bin1_mutation/figures/top5_marcadores.png", dpi=300, bbox_inches="tight")
-plt.show()
+plt.savefig("bin1_mutation/figures/homozigotos/top5_marcadores.png", dpi=300, bbox_inches="tight")
+#plt.show()
 
 # ============================================================
 # Etapa 6: Impacto da Mutação nas Proporções Celulares
@@ -196,7 +203,12 @@ contagem_celulas = pd.crosstab( # Cruzando o genótipo com os clusters validados
 ) * 100
 
 # Forçando a ordem lógica (biológica) das colunas
-ordem_desejada = ['Homeostática 1 (Repouso)', 'Homeostática 2', 'Subpopulação (DOCK4+)', 'Estado DAM (SPP1+)']
+ordem_desejada = [
+    'Micróglia Homeostática Basal (ADAM7-AS1+, DLEU7+)', 
+    'Micróglia Homeostática Fagocítica (FRMD4A+, PLXDC2+)', 
+    'Micróglia Ativada por Estresse Metabólico (HIF1A+, SPP1+)', 
+    'Micróglia Associada à Doença - DAM (SPP1+, FTH1+)'
+]
 contagem_celulas = contagem_celulas[ordem_desejada]
 
 #Gráfico de barras empilhadas
@@ -207,8 +219,8 @@ plt.ylabel("Proporção das células (%)")
 plt.xlabel("Genótipo BIN1 (rs6733839)")
 plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/Proporção_clusters_BIN1.png", dpi=300, bbox_inches="tight")
-plt.show()
+plt.savefig("bin1_mutation/figures/homozigotos/Proporção_clusters_BIN1.png", dpi=300, bbox_inches="tight")
+#plt.show()
 
 #=============================================================
 # ETAPA 7: Expressão Gênica por Genótipo e Ancestralidade
@@ -245,178 +257,112 @@ for gene in genes_alvo:
         density_norm="width"
     )
     
-    plt.title(f"Distribuição da Expressão de {gene} por Genótipo e Ancestralidade)")
+    plt.title(f"Distribuição da Expressão de {gene} por Genótipo e Ancestralidade")
     plt.ylabel(f"Expressão Normalizada ({gene})")
     plt.xlabel("Genótipo BIN1 (rs6733839)")
     plt.legend(title="Ancestralidade", bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.tight_layout()
     
-    plt.savefig(f"bin1_mutation/figures/Expressão_{gene}_Ancestralidade.png", dpi=300, bbox_inches="tight")
-    plt.show()
+    plt.savefig(f"bin1_mutation/figures/homozigotos/Expressão_{gene}_Ancestralidade.png", dpi=300, bbox_inches="tight")
+    #plt.show()
     
-# ============================================================
-# ETAPA 8: Agregação Pseudobulk
-# ============================================================
+# ===========================================================
+# ETAPA 8: Cálculo de Abundância Celular por Doador (Proporção real)
+# ===========================================================
 
-# Garantindo uso da matriz bruta, pois o deseq2 exige n. inteiros
+print("\n Análise de Abundância Celular por doador...")
 
-if adata_limpo.raw is not None:
-    matriz_counts = adata_limpo.raw.X
+# Criando tabela cruzando cada paciente com a quantidade de células dele
+contagem_doador = pd.crosstab(adata_limpo.obs['donor_id'], adata_limpo.obs['Estado_Microglial'])
+
+# Somando para saber qual o N total de células de cada paciente
+total_celulas_doador = contagem_doador.sum(axis=1)    
+
+# Dividindo a contagem pelo total para achar a porcentagem real (%) dentro de cada paciente
+proporcao_doador = contagem_doador.div(total_celulas_doador, axis=0) * 100
+
+# Isolando a coluna relevante (DAM)
+nome_coluna_dam = 'Micróglia Associada à Doença - DAM (SPP1+, FTH1+)'
+df_abundancia = pd.DataFrame({
+    'Porcentagem_DAM': proporcao_doador[nome_coluna_dam],
+    'Total_Celulas': total_celulas_doador
+})
+
+# Resgatando os metadados (0/0 ou 1/1) para melhor identificação
+df_abundancia = df_abundancia.merge(
+    pacientes_unicos[['donor_id', 'Mutacao_BIN1']].set_index('donor_id'), left_index=True, right_index=True
+)
+
+# Limpando dados inválidos e isolando extremos (1/1 e 0/0)
+df_abundancia = df_abundancia.dropna(subset=['Mutacao_BIN1'])
+df_abundancia['Mutacao_BIN1'] = df_abundancia['Mutacao_BIN1'].astype(str)
+df_teste = df_abundancia[df_abundancia['Mutacao_BIN1'].isin(['0/0', '1/1'])]
+
+# ===========================================================
+# Etapa 9: VIsualização Transparente e Teste Estatítsica (Mann-Whitney)
+# ===========================================================
+
+# Separando as porcentagens em duas listas matemáticas para o SciPy comparar
+
+grupo_00 = df_teste[df_teste['Mutacao_BIN1'] == '0/0']['Porcentagem_DAM']
+grupo_11 = df_teste[df_teste['Mutacao_BIN1'] == '1/1']['Porcentagem_DAM']
+
+# Rodando o teste estatístico (Mann-Whitney U)
+
+stat, p_valor = mannwhitneyu(grupo_11, grupo_00, alternative='two-sided')
+
+print("\n=== RESULTADOS ESTATÍSTICOS DE ABUNDÂNCIA (Células DAM) ===")
+print(f"Número de Doadores Controle (0/0): {len(grupo_00)}")
+print(f"Número de Doadores Mutados (1/1): {len(grupo_11)}")
+print(f"P-valor (Mann-Whitney U): {p_valor:.4e}")
+
+if p_valor < 0.05:
+    print("Conclusão: A diferença na abundância de células DAM é ESTATISTICAMENTE SIGNIFICATIVA")
 else:
-    matriz_counts = adata_limpo.X
-    
-# Descomprimindo a matriz caso ela seja esparsa para o pandas conseguir ler
+    print("Conclusão: Não há diferença estatisticamente significativa na abundância de células DAM entre os grupos")
 
-if hasattr(matriz_counts, 'toarray'):
-    matriz_densa = matriz_counts.toarray()
-else:
-    matriz_densa = matriz_counts
+# Plotagem (Boxplot + Stripplot)
 
-# Cirando a tabela associando as contagens aos donor_ids
+plt.figure(figsize=(8, 6))
 
-df_counts = pd.DataFrame(
-    matriz_densa, #numeros puros
-    index=adata_limpo.obs['donor_id'], # Nome das linhas
-    columns=adata_limpo.var_names #Cabeçalho das colunas [genes]
+# Boxplot cinza no fundo para mostrar mediana
+sns.boxplot(
+    data=df_teste,
+    x='Mutacao_BIN1',
+    y='Porcentagem_DAM',
+    color='lightgray',
+    showfliers=False
 )
 
-# Somando todas as células do mesmo paciente (Agregação)
+#Stripplot por cima para desenhar 1 bolinha = 1 paciente
 
-pseudobulk_df = df_counts.groupby(df_counts.index).sum()
-
-print("Dimensão da matriz celular original: ", adata_limpo.shape)
-print("Dimensão da matriz de pacientes (pseudobulk): ", pseudobulk_df.shape)
-
-# ============================================================
-# Etapa 9: Exportação para análise de Expressão Diferencial
-# ============================================================
-
-print("\n--- Iniciando Inferência Estatística Pseudobulk ---")
-
-# Preparando os metadados no nivel do paciente
-# Filtrando os pacientes unicos e alinhando os índices
-
-df_metadata = pacientes_unicos.set_index('donor_id')[["Mutacao_BIN1", "ethnicity", "Braak.stage"]].copy()
-
-# Garantindo que a ordem dos pacientes seja igual à do pseudobulk_df
-
-df_metadata = df_metadata.loc[pseudobulk_df.index]
-
-# Filtrando apenas os genótipos extremos para contraste estatístico (0/0 vs 1/1)
-# Isolando grupo selvagem e mutado homozigoto
-
-pacientes_filtro = df_metadata['Mutacao_BIN1'].isin(['0/0', '1/1'])
-counts_finais = pseudobulk_df.loc[pacientes_filtro].copy()
-metadata_final = df_metadata.loc[pacientes_filtro].copy()
-
-# Pré-filtragem de genes com contagem global muito baixo ( < 10 leituras totais) [Melhora o poder estatítisco removendo ruído de baixa expressão]
-
-# Alterações feitas com IA:
-
-# 1. Força a coluna do genótipo a ser do tipo 'string' pura. 
-# Por que é seguro? Evita que o Pandas confunda o '0/0' com uma data ou divisão matemática, o que quebra a matriz.
-metadata_final['Mutacao_BIN1'] = metadata_final['Mutacao_BIN1'].astype(str)
-
-# 2. Remove qualquer paciente que, por algum erro no arquivo original, tenha a anotação da mutação em branco (NaN).
-# Por que é seguro? O DESeq2 não consegue calcular diferença de expressão para um paciente "sem grupo". Isso previne a "Singular Matrix".
-metadata_final = metadata_final.dropna(subset=['Mutacao_BIN1'])
-
-# 3. Realinha a matriz de expressão para garantir que ela tenha exatamente os mesmos pacientes do metadado limpo.
-# Por que é seguro? Garante simetria perfeita entre o "X" e o "Y" da equação de regressão.
-counts_finais = counts_finais.loc[metadata_final.index]
-
-genes_validos = counts_finais.sum(axis=0) >= 10
-counts_finais = counts_finais.loc[:, genes_validos]
-
-print(f"Pacientes analisados (0/0) vs 1/1: {counts_finais.shape[0]}")
-print(f"Genes analisados após filtragem: {counts_finais.shape[1]}")
-
-# Inicialização e ajuste do modelo DESeq2
-# n_cpus= -1 utiliza todos os núcleos do processador para paralelismo
-dds = DeseqDataSet(
-    counts=counts_finais.astype(int), # O DESeq2 exige que a matriz de contagem tenha estritamente números inteiros
-    metadata=metadata_final,
-    design="~Mutacao_BIN1",
-    n_cpus=1
+sns.stripplot(
+    data=df_teste,
+    x='Mutacao_BIN1',
+    y='Porcentagem_DAM',
+    hue='Mutacao_BIN1',
+    palette=['#440154', '#21918c'],
+    size=8,
+    jitter=True,
+    alpha=0.7,
+    legend=False
 )
 
-# Ajuste dos fatores de tamanho e dispersão bayesiana
-dds.deseq2()
+plt.title("Abundância de Células DAM(SPP1+) por Doador Individual")
+plt.xlabel("Genótipo BIN1 (rs6733839)")
+plt.ylabel("Proporção de Células DAM no Doador (%)")
 
-# Teste estatístico (Wald Test)
-# Testando o impacto do genótipo '1/1' em relação ao '0/0' (controle)
+# Escrevendo o p_value validado no gráfico
 
-stat_res = DeseqStats(
-    dds,
-    contrast=["Mutacao_BIN1", "1/1", "0/0"],
-    n_cpus=1 
-)
-stat_res.summary()
-
-# Extraindo tabela final de resultados contendo Log2FoldChange e p-adj
-
-df_resultados = stat_res.results_df
-
-# Removendo genes que receberam 'NaN' do algoritmo do DESeq2
-df_resultados = df_resultados.dropna(subset=['padj', 'log2FoldChange'])
-
-# Exibindo o resultado para o gene SPP1
-
-if 'SPP1' in df_resultados.index:
-    spp1_res = df_resultados.loc['SPP1']
-    print("\n=== VALIDAÇÃO ESTATÍSTICA FINAL DO GENE SPP1 ===")
-    print(f"Log2 Fold Change: {spp1_res['log2FoldChange']:.4f}")
-    print(f"P-valor Ajustado (FDR): {spp1_res['padj']:.4e}")
-    
-# Salvando a tabela com todos os genes e suas significâncias estatísticas
-
-df_resultados.to_csv("bin1_mutation/resultados_expressao_diferencial_DESeq2.csv")
-
-# Visualização final em Volcano Plot
-
-plt.figure(figsize=(9, 6))
-
-# Definindo pontos significativos (p-adj < 0.05 e |log2FC| > 0.5)
-sig = (df_resultados['padj'] < 0.05) & (np.abs(df_resultados['log2FoldChange']) > 0.5)
-
-# Plot dos genes neutros
-
-plt.scatter(
-    df_resultados.loc[~sig, 'log2FoldChange'],
-    -np.log10(df_resultados.loc[~sig, 'padj']),
-    color='grey', alpha=0.4, s=15, label='Não Significativo'
+plt.text(
+    x=0.5, y=df_teste['Porcentagem_DAM'].max() * 0.95,
+    s=f"Mann-Whitney p-valor = {p_valor:.4f}",
+    ha='center', va='center', fontsize=12,
+    bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray', boxstyle='round,pad=0.5')
 )
 
-# Plot dos genes significativos
-
-plt.scatter(
-    df_resultados.loc[sig, 'log2FoldChange'],
-    -np.log10(df_resultados.loc[sig, 'padj']),
-    color='red', alpha=0.8, s=25, label='Significativo (padj < 0.05)'
-) 
-
-# Destacando o SPP1 no gráfico
-
-if 'SPP1' in df_resultados.index:
-    spp1_fc = df_resultados.loc['SPP1', 'log2FoldChange']
-    spp1_p = -np.log10(df_resultados.loc['SPP1', 'padj'])
-    plt.scatter(spp1_fc, spp1_p, color='blue', s=80, zorder=5)
-    plt.annotate(
-        'SPP1 (DAM)',
-        (spp1_fc, spp1_p),
-        textcoords="offset points",
-        xytext=(10, 10),
-        ha='center',
-        fontweight='bold',
-        color='blue'
-    )
-
-plt.axhline(-np.log10(0.05), linestyle='--', color='black', linewidth=0.8)
-plt.axvline(0, linestyle='--', color='black', linewidth=0.8)
-plt.title("Volcano Plot: Expressão Diferencial (Somente Cluster DAM SPP1+) - BIN1 1/1 vs 0/0")
-plt.xlabel("Log2 Fold Change")
-plt.ylabel("-Log10 P-valor ajustado")
-plt.legend(loc='upper right')
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/Volcano_Plot_DESeq2_Cluster_DAM2.png", dpi=300, bbox_inches="tight")
+plt.savefig("bin1_mutation/figures/homozigotos/Proporcao_DAM_Por_Doador_Estatistica.png", dpi=300, bbox_inches="tight")
 plt.show()
+
+adata_limpo.write_h5ad("bin1_mutation/adata_limpo_anotado.h5ad", compression='gzip')
