@@ -6,7 +6,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from pyclustree import clustree
 from sklearn.metrics import adjusted_rand_score
-from scipy.stats import mannwhitneyu # cálculo do p-valor baseado nas proporções.
+from scipy.stats import kruskal # cálculo do p-valor baseado nas proporções.
+from scipy.stats import mannwhitneyu
 
 adata = sc.read_h5ad("bin1_mutation/BIN1_Mutation.h5ad")
 
@@ -57,7 +58,7 @@ for marcador in marcadores_clinicos:
         plt.xlabel(marcador)
         plt.tight_layout()
         nome_arquivo = marcador.replace('.', '_').replace(' ', '_')
-        plt.savefig(f"bin1_mutation/figures/homozigotos/heatmap_{nome_arquivo}_bin1.png", dpi=300, bbox_inches="tight")
+        plt.savefig(f"bin1_mutation/figures/todos_genotipos/heatmap_{nome_arquivo}_bin1.png", dpi=300, bbox_inches="tight")
         #plt.show()
     else:
         print(f"A coluna '{marcador}' não foi encontrada em adata.obs")
@@ -94,7 +95,7 @@ clustree(
     title="Estabilidade dos Clusters (Fine Tuning) - Micróglias"
 )
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/homozigotos/Fine Tuning da Estabilidade dos Clusters - Micróglias.png", dpi=300, bbox_inches="tight" )
+plt.savefig("bin1_mutation/figures/todos_genotipos/Fine Tuning da Estabilidade dos Clusters - Micróglias.png", dpi=300, bbox_inches="tight" )
 #plt.show()
 
 #=============================================================
@@ -135,7 +136,7 @@ plt.title(f"Correspondência: Leiden {res_vencedora} vs SEA_AD Supertype (%)")
 plt.xlabel(f"Clusters Leiden (Resolução {res_vencedora})")
 plt.ylabel("Anotação Original SEA-AD (Supertype)")
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/homozigotos/Heatmap_Contigencia_Best_Resolution.png", dpi=300, bbox_inches="tight")
+plt.savefig("bin1_mutation/figures/todos_genotipos/Heatmap_Contigencia_Best_Resolution.png", dpi=300, bbox_inches="tight")
 #plt.show()
 
 #A resolução Ideal é 0.15
@@ -163,7 +164,7 @@ sc.pl.umap(
     palette='Set1',
     show=False
 )
-plt.savefig("bin1_mutation/figures/homozigotos/UMAP_Anotado.png", dpi=300, bbox_inches="tight")
+plt.savefig("bin1_mutation/figures/todos_genotipos/UMAP_Anotado.png", dpi=300, bbox_inches="tight")
 #plt.show()
 
 #=============================================================
@@ -207,7 +208,7 @@ sc.pl.rank_genes_groups_dotplot(
     show=False 
 )
 
-plt.savefig("bin1_mutation/figures/homozigotos/top5_marcadores_limpo.png", dpi=300, bbox_inches="tight")
+plt.savefig("bin1_mutation/figures/todos_genotipos/top5_marcadores_limpo.png", dpi=300, bbox_inches="tight")
 #plt.show()
 
 # ============================================================
@@ -239,7 +240,7 @@ plt.ylabel("Proporção das células (%)")
 plt.xlabel("Genótipo BIN1 (rs6733839)")
 plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/homozigotos/Proporção_clusters_BIN1_limpo.png", dpi=300, bbox_inches="tight")
+plt.savefig("bin1_mutation/figures/todos_genotipos/Proporção_clusters_BIN1_limpo.png", dpi=300, bbox_inches="tight")
 #plt.show()
 
 #=============================================================
@@ -283,106 +284,117 @@ for gene in genes_alvo:
     plt.legend(title="Ancestralidade", bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.tight_layout()
     
-    plt.savefig(f"bin1_mutation/figures/homozigotos/Expressão_{gene}_Ancestralidade_limpo.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"bin1_mutation/figures/todos_genotipos/Expressão_{gene}_Ancestralidade_limpo.png", dpi=300, bbox_inches="tight")
     #plt.show()
     
 # ===========================================================
-# ETAPA 8: Cálculo de Abundância Celular por Doador (Proporção real)
+# ETAPAS 8 e 9: Abundância Celular e Estatística para todos os Tipos Celulares
 # ===========================================================
 
-print("\n Análise de Abundância Celular por doador...")
+print("\n=== Análise de Abundância Celular por Doador (Todos os Clusters) ===")
 
-# Criando tabela cruzando cada paciente com a quantidade de células dele
+# Cálculo das proporções base
 contagem_doador = pd.crosstab(adata_limpo.obs['donor_id'], adata_limpo.obs['Estado_Microglial'])
-
-# Somando para saber qual o N total de células de cada paciente
 total_celulas_doador = contagem_doador.sum(axis=1)    
-
-# Dividindo a contagem pelo total para achar a porcentagem real (%) dentro de cada paciente
 proporcao_doador = contagem_doador.div(total_celulas_doador, axis=0) * 100
 
-# Isolando a coluna relevante (DAM)
-nome_coluna_dam = 'Micróglia Associada à Doença - DAM (SPP1+ alto, FTH1+)'
-df_abundancia = pd.DataFrame({
-    'Porcentagem_DAM': proporcao_doador[nome_coluna_dam],
-    'Total_Celulas': total_celulas_doador
-})
+# Configurações Globais de Plotagem
+ordem_genotipos = ['0/0', '0/1', '1/1']
+cores = {'0/0': '#440154', '0/1': '#35b779', '1/1': '#21918c'}
 
-# Resgatando os metadados (0/0 ou 1/1) para melhor identificação
-df_abundancia = df_abundancia.merge(
-    pacientes_unicos[['donor_id', 'Mutacao_BIN1']].set_index('donor_id'), left_index=True, right_index=True
-)
+# Pegando todos os nomes dos clusters validados (as colunas da proporção)
+estados_celulares = proporcao_doador.columns.tolist()
 
-# Limpando dados inválidos e isolando extremos (1/1 e 0/0)
-df_abundancia = df_abundancia.dropna(subset=['Mutacao_BIN1'])
-df_abundancia['Mutacao_BIN1'] = df_abundancia['Mutacao_BIN1'].astype(str)
-df_teste = df_abundancia[df_abundancia['Mutacao_BIN1'].isin(['0/0', '1/1'])]
+# Loop de Análise (Roda uma vez para cada tipo celular)
+for estado in estados_celulares:
+    print(f"\nProcessando estado: {estado}")
+    
+    # Montando o DataFrame específico para o cluster da rodada
+    df_estado = pd.DataFrame({
+        'Porcentagem': proporcao_doador[estado],
+        'Total_Celulas': total_celulas_doador
+    })
+    
+    # Mesclando com os metadados do paciente
+    df_estado = df_estado.merge(
+        pacientes_unicos[['donor_id', 'Mutacao_BIN1']].set_index('donor_id'), 
+        left_index=True, right_index=True
+    )
+    
+    # Limpando e filtrando os 3 genótipos alvo
+    df_estado = df_estado.dropna(subset=['Mutacao_BIN1'])
+    df_estado['Mutacao_BIN1'] = df_estado['Mutacao_BIN1'].astype(str)
+    df_teste = df_estado[df_estado['Mutacao_BIN1'].isin(['0/0', '0/1', '1/1'])].copy()
+    
+    # Agrupamento em Modelo Recessivo (1/1 vs Outros)
+    
+    mapeamento_recessivo = {
+        '0/0': '0/0 + 0/1', 
+        '0/1': '0/0 + 0/1', 
+        '1/1': '1/1 (Homozigoto Recessivo)'
+    }
+    df_teste['Agrupamento_BIN1'] = df_teste['Mutacao_BIN1'].map(mapeamento_recessivo)
+    
+    ordem_agrupada = ['0/0 + 0/1', '1/1 (Homozigoto Recessivo)']
+    cores_agrupadas = {'0/0 + 0/1': '#440154', '1/1 (Homozigoto Recessivo)': '#21918c'}
+    
+    # Separando as distribuições matemáticas
+    grupo_outros = df_teste[df_teste['Agrupamento_BIN1'] == '0/0 + 0/1']['Porcentagem']
+    grupo_11 = df_teste[df_teste['Agrupamento_BIN1'] == '1/1 (Homozigoto Recessivo)']['Porcentagem']
+    
+    # Teste de Mann-Whitney U (Ideal para 2 grupos)
+    stat, p_valor = mannwhitneyu(grupo_outros, grupo_11, alternative='two-sided')
+    print(f"P-valor (Mann-Whitney U): {p_valor:.4f}")
+    
+    # PLOT
+    plt.figure(figsize=(8, 6))
+    
+    sns.boxplot(
+        data=df_teste,
+        x='Agrupamento_BIN1',
+        y='Porcentagem',
+        order=ordem_agrupada,
+        color='lightgray',
+        showfliers=False
+    )
+    
+    sns.stripplot(
+        data=df_teste,
+        x='Agrupamento_BIN1',
+        y='Porcentagem',
+        order=ordem_agrupada,
+        hue='Agrupamento_BIN1',
+        palette=cores_agrupadas,
+        size=8,
+        jitter=True,
+        alpha=0.7,
+        legend=False
+    )
+    
+    # Ajustando o título para não ficar gigante
+    nome_curto = estado.split('(')[0].strip()
+    
+    plt.title(f"Abundância: {nome_curto}\nHomozigoto Recessivo vs Outros")
+    plt.xlabel("Modelo Recessivo BIN1")
+    plt.ylabel("Proporção no Doador (%)")
+    
+    # Prevenção matemática para o texto do p-valor
+    ymax = df_teste['Porcentagem'].max()
+    pos_y = ymax * 0.95 if ymax > 0 else 0.5
+    
+    plt.text(
+        x=0.5, y=pos_y,  # Centralizado entre os dois boxplots
+        s=f"Mann-Whitney p-valor = {p_valor:.4f}",
+        ha='center', va='center', fontsize=12,
+        bbox=dict(facecolor='white', alpha=0.9, edgecolor='gray', boxstyle='round,pad=0.5')
+    )
+    
+    plt.tight_layout()
+    
+    # Salvando a figura
+    nome_arquivo = nome_curto.replace(' ', '_').replace('-', '').replace('/', '')
+    plt.savefig(f"bin1_mutation/figures/todos_genotipos/Abundancia_Recessivo_{nome_arquivo}.png", dpi=300, bbox_inches="tight")
+    
+    plt.close()
 
-# ===========================================================
-# Etapa 9: VIsualização Transparente e Teste Estatítsica (Mann-Whitney)
-# ===========================================================
-
-# Separando as porcentagens em duas listas matemáticas para o SciPy comparar
-
-grupo_00 = df_teste[df_teste['Mutacao_BIN1'] == '0/0']['Porcentagem_DAM']
-grupo_11 = df_teste[df_teste['Mutacao_BIN1'] == '1/1']['Porcentagem_DAM']
-
-# Rodando o teste estatístico (Mann-Whitney U)
-
-stat, p_valor = mannwhitneyu(grupo_11, grupo_00, alternative='two-sided')
-
-print("\n=== RESULTADOS ESTATÍSTICOS DE ABUNDÂNCIA (Células DAM) ===")
-print(f"Número de Doadores Controle (0/0): {len(grupo_00)}")
-print(f"Número de Doadores Mutados (1/1): {len(grupo_11)}")
-print(f"P-valor (Mann-Whitney U): {p_valor:.4e}")
-
-if p_valor < 0.05:
-    print("Conclusão: A diferença na abundância de células DAM é ESTATISTICAMENTE SIGNIFICATIVA")
-else:
-    print("Conclusão: Não há diferença estatisticamente significativa na abundância de células DAM entre os grupos")
-
-# Plotagem (Boxplot + Stripplot)
-
-plt.figure(figsize=(8, 6))
-
-# Boxplot cinza no fundo para mostrar mediana
-sns.boxplot(
-    data=df_teste,
-    x='Mutacao_BIN1',
-    y='Porcentagem_DAM',
-    color='lightgray',
-    showfliers=False
-)
-
-#Stripplot por cima para desenhar 1 bolinha = 1 paciente
-
-sns.stripplot(
-    data=df_teste,
-    x='Mutacao_BIN1',
-    y='Porcentagem_DAM',
-    hue='Mutacao_BIN1',
-    palette=['#440154', '#21918c'],
-    size=8,
-    jitter=True,
-    alpha=0.7,
-    legend=False
-)
-
-plt.title("Abundância de Células DAM(SPP1+) por Doador Individual")
-plt.xlabel("Genótipo BIN1 (rs6733839)")
-plt.ylabel("Proporção de Células DAM no Doador (%)")
-
-# Escrevendo o p_value validado no gráfico
-
-plt.text(
-    x=0.5, y=df_teste['Porcentagem_DAM'].max() * 0.95,
-    s=f"Mann-Whitney p-valor = {p_valor:.4f}",
-    ha='center', va='center', fontsize=12,
-    bbox=dict(facecolor='white', alpha=0.8, edgecolor='gray', boxstyle='round,pad=0.5')
-)
-
-plt.tight_layout()
-plt.savefig("bin1_mutation/figures/homozigotos/Proporcao_DAM_Por_Doador_Estatistica_limpo.png", dpi=300, bbox_inches="tight")
-plt.show()
-
-adata_limpo.write_h5ad("bin1_mutation/adata_limpo_anotado.h5ad", compression='gzip')
+# adata_limpo.write_h5ad("bin1_mutation/adata_limpo_anotado.h5ad", compression='gzip')
