@@ -288,6 +288,84 @@ for gene in genes_alvo:
     #plt.show()
     
 # ===========================================================
+# ETAPA 7.5: Expressão de BIN1 por Cluster (Estado Microglial)
+# ===========================================================
+
+print("\n=== Gerando gráficos de expressão de BIN1 por cluster ===")
+
+# Gráfico Básico Nativo do Scanpy (Apenas Clusters)
+
+fig, ax = plt.subplots(figsize=(14, 7))
+
+sc.pl.violin(
+    adata_limpo, 
+    keys=['BIN1'], 
+    groupby='Estado_Microglial', 
+    rotation=45, 
+    palette='Set2',
+    ax=ax,              # Ancora o desenho do scanpy na "tela" customizada
+    show=False
+)
+plt.title("Expressão de BIN1 por Estado Microglial")
+plt.xticks(fontsize=12, ha='right') # Aumentando a fonte e centralizando a ponta do texto sob o violino
+plt.yticks(fontsize=12)
+plt.ylabel("Expressão Normalizada (BIN1)", fontsize=12)
+plt.xlabel("") # Removendo o título do eixo X para limpar espaço
+plt.tight_layout()
+plt.savefig("bin1_mutation/figures/todos_genotipos/Violin_BIN1_Apenas_Clusters.png", dpi=300, bbox_inches="tight")
+plt.close()
+
+# Gráfico Avançado Seaborn (Clusters divididos pelo Modelo Recessivo)
+
+# Extraindo a expressão exata do gene BIN1
+if hasattr(adata_limpo.X, 'toarray'):
+    exp_bin1 = adata_limpo[:, 'BIN1'].X.toarray().flatten()
+else:
+    exp_bin1 = adata_limpo[:, 'BIN1'].X.flatten()
+
+# Criando um mapeamento rápido do modelo recessivo para os metadados
+mapeamento_recessivo = {
+    '0/0': '0/0 + 0/1', 
+    '0/1': '0/0 + 0/1', 
+    '1/1': '1/1 (Homozigoto Recessivo)'
+}
+
+# Criando um DataFrame focado no BIN1
+df_bin1_cluster = pd.DataFrame({
+    'Expressão_BIN1': exp_bin1,
+    'Estado_Microglial': adata_limpo.obs['Estado_Microglial'],
+    'Genótipo_Recessivo': adata_limpo.obs['Mutacao_BIN1'].map(mapeamento_recessivo)
+})
+
+# Removendo NAs (caso algum paciente não tenha o genótipo catalogado)
+df_bin1_cluster = df_bin1_cluster.dropna(subset=['Genótipo_Recessivo'])
+
+# Plotando o violino dividido (split)
+plt.figure(figsize=(14, 7))
+sns.violinplot(
+    data=df_bin1_cluster,
+    x='Estado_Microglial',
+    y='Expressão_BIN1',
+    hue='Genótipo_Recessivo',
+    split=True,         # Juntando as duas metades no mesmo violin
+    inner="quart",      # Mostrando os quartis matemáticos por dentro
+    linewidth=1.2,
+    cut=0,
+    palette={'0/0 + 0/1': '#bcbddc', '1/1 (Homozigoto Recessivo)': '#a1d99b'}
+)
+
+plt.xticks(rotation=45, ha='right', fontsize=12)
+plt.yticks(fontsize=12)
+plt.title("Expressão de BIN1 por Estado Microglial e Genótipo (Modelo Recessivo)")
+plt.ylabel("Expressão Normalizada (BIN1)", fontsize=12)
+plt.xlabel("")
+plt.legend(title="Modelo Genético", bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=11, title_fontsize=12)
+plt.tight_layout()
+
+plt.savefig("bin1_mutation/figures/todos_genotipos/Violin_BIN1_Clusters_e_Recessivo.png", dpi=300, bbox_inches="tight")
+plt.close()
+    
+# ===========================================================
 # ETAPAS 8 e 9: Abundância Celular e Estatística para todos os Tipos Celulares
 # ===========================================================
 
