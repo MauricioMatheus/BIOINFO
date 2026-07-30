@@ -243,6 +243,139 @@ plt.tight_layout()
 plt.savefig("bin1_mutation/figures/todos_genotipos/Proporção_clusters_BIN1_limpo.png", dpi=300, bbox_inches="tight")
 #plt.show()
 
+# Impacto do Estágio de Braak nas Proporções Celulares
+
+print("Gerando gráfico de proporções por Estágio de Braak...")
+
+# Verificando se a coluna existe
+if 'Braak.stage' in adata_limpo.obs.columns:
+    
+    # Removendo possíveis NAs na coluna Braak para não sujar o gráfico
+    df_braak = adata_limpo.obs.dropna(subset=['Braak.stage']).copy()
+
+    # Cruzando o Estágio de Braak com os clusters validados
+    contagem_braak = pd.crosstab( 
+        df_braak['Braak.stage'],
+        df_braak['Estado_Microglial'],
+        normalize='index'
+    ) * 100
+
+    # Forçando a mesma ordem lógica (biológica) das colunas usada no gráfico anterior
+    contagem_braak = contagem_braak[ordem_desejada]
+
+    # Gráfico de barras empilhadas
+    contagem_braak.plot(kind='bar', stacked=True, figsize=(10,6), colormap='viridis')
+    plt.title("Distribuição dos Estados Microgliais (Leiden 0.15) por Estágio de Braak")
+    plt.ylabel("Proporção das células (%)")
+    plt.xlabel("Estágio de Braak (Progressão da Patologia)")
+    plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
+    plt.tight_layout()
+    
+    plt.savefig("bin1_mutation/figures/todos_genotipos/Proporcao_clusters_Braak_limpo.png", dpi=300, bbox_inches="tight")
+    plt.close()
+    
+    print("Gráfico de Braak salvo com sucesso!")
+else:
+    print("Atenção: Coluna 'Braak.stage' não encontrada nos metadados.")
+
+# Impacto da Fase de Thal nas Proporções Celulares
+
+print("\n=== Gerando gráfico de proporções por Fase de Thal ===")
+
+if 'Thal.phase' in adata_limpo.obs.columns:
+    
+    # GRÁFICO DE BARRAS EMPILHADAS
+    
+    # Removendo possíveis NAs na coluna Thal para não sujar o gráfico
+    df_thal = adata_limpo.obs.dropna(subset=['Thal.phase']).copy()
+
+    # Cruzando a Fase de Thal com os clusters validados
+    contagem_thal = pd.crosstab( 
+        df_thal['Thal.phase'],
+        df_thal['Estado_Microglial'],
+        normalize='index'
+    ) * 100
+
+    # Forçando a mesma ordem lógica (biológica) das colunas
+    contagem_thal = contagem_thal[ordem_desejada]
+
+    # Plot
+    contagem_thal.plot(kind='bar', stacked=True, figsize=(10,6), colormap='viridis')
+    plt.title("Distribuição dos Estados Microgliais (Leiden 0.15) por Fase de Thal")
+    plt.ylabel("Proporção das células (%)")
+    plt.xlabel("Fase de Thal (Acúmulo de Beta-amiloide)")
+    plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
+    plt.tight_layout()
+    
+    plt.savefig("bin1_mutation/figures/todos_genotipos/Proporcao_clusters_Thal_limpo.png", dpi=300, bbox_inches="tight")
+    plt.close()
+    
+# Impacto do Escore CERAD nas Proporções Celulares
+
+print("\n=== Gerando gráfico de proporções por Escore CERAD ===")
+
+if 'CERAD.score' in adata_limpo.obs.columns:
+    
+    # GRÁFICO DE BARRAS EMPILHADAS
+    
+    # Removendo possíveis NAs na coluna CERAD para não sujar o gráfico
+    df_cerad = adata_limpo.obs.dropna(subset=['CERAD.score']).copy()
+
+    # Cruzando o CERAD com os clusters validados
+    contagem_cerad = pd.crosstab( 
+        df_cerad['CERAD.score'],
+        df_cerad['Estado_Microglial'],
+        normalize='index'
+    ) * 100
+
+    # Forçando a ordem lógica (biológica) das colunas (Clusters)
+    contagem_cerad = contagem_cerad[ordem_desejada]
+
+    # Plot
+    contagem_cerad.plot(kind='bar', stacked=True, figsize=(10,6), colormap='viridis')
+    plt.title("Distribuição dos Estados Microgliais (Leiden 0.15) por Escore CERAD")
+    plt.ylabel("Proporção das células (%)")
+    plt.xlabel("Escore CERAD (Densidade de Placas Neuríticas)")
+    plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
+    plt.tight_layout()
+    
+    plt.savefig("bin1_mutation/figures/todos_genotipos/Proporcao_clusters_CERAD_limpo.png", dpi=300, bbox_inches="tight")
+    plt.close()
+    
+# Impacto do ADNC (Consenso Global) nas Proporções Celulares
+
+print("\n=== Gerando gráfico de proporções por Nível de ADNC ===")
+
+if 'ADNC' in adata_limpo.obs.columns:
+    
+    # GRÁFICO DE BARRAS EMPILHADAS
+    
+    # Removendo possíveis NAs na coluna ADNC
+    df_adnc = adata_limpo.obs.dropna(subset=['ADNC']).copy()
+
+    # Cruzando o ADNC com os clusters validados
+    contagem_adnc = pd.crosstab( 
+        df_adnc['ADNC'],
+        df_adnc['Estado_Microglial'],
+        normalize='index'
+    ) * 100
+
+    # Forçando a ordem lógica biológica das colunas (Clusters) e das linhas (Gravidade)
+    contagem_adnc = contagem_adnc[ordem_desejada]
+    ordem_adnc = ['Low', 'Intermediate', 'High']
+    contagem_adnc = contagem_adnc.reindex(ordem_adnc)
+
+    # Plot
+    contagem_adnc.plot(kind='bar', stacked=True, figsize=(10,6), colormap='viridis')
+    plt.title("Distribuição dos Estados Microgliais (Leiden 0.15) por Gravidade ADNC")
+    plt.ylabel("Proporção das células (%)")
+    plt.xlabel("ADNC (Gravidade Neuropatológica Global)")
+    plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
+    plt.tight_layout()
+    
+    plt.savefig("bin1_mutation/figures/todos_genotipos/Proporcao_clusters_ADNC_limpo.png", dpi=300, bbox_inches="tight")
+    plt.close()
+
 #=============================================================
 # ETAPA 7: Expressão Gênica por Genótipo e Ancestralidade
 # ============================================================
@@ -383,14 +516,124 @@ cores = {'0/0': '#440154', '0/1': '#35b779', '1/1': '#21918c'}
 # Pegando todos os nomes dos clusters validados (as colunas da proporção)
 estados_celulares = proporcao_doador.columns.tolist()
 
-# Loop de Análise (Roda uma vez para cada tipo celular)
-for estado in estados_celulares:
-    print(f"\nProcessando estado: {estado}")
+# PAINEL INTEGRADO: Abundância Celular por Genótipo BIN1 (Kruskal-Wallis)
+# ===========================================================
+print("\n=== Gerando Painel Integrado de Abundância por Genótipo ===")
+
+n_plots = len(estados_celulares)
+colunas = 2
+linhas = int(np.ceil(n_plots / colunas))
+
+# Criando a figura (Grid)
+fig, axes = plt.subplots(linhas, colunas, figsize=(16, 6 * linhas))
+axes = axes.flatten()
+
+for i, estado in enumerate(estados_celulares):
+    ax = axes[i]
     
-    # Montando o DataFrame específico para o cluster da rodada
+    # Montando o DataFrame
     df_estado = pd.DataFrame({
-        'Porcentagem': proporcao_doador[estado],
-        'Total_Celulas': total_celulas_doador
+        'Porcentagem': proporcao_doador[estado]
+    })
+    
+    # Mesclando com os metadados do paciente
+    df_estado = df_estado.merge(
+        pacientes_unicos[['donor_id', 'Mutacao_BIN1']].set_index('donor_id'), 
+        left_index=True, right_index=True
+    )
+    
+    # Limpando e filtrando os 3 genótipos alvo
+    df_estado = df_estado.dropna(subset=['Mutacao_BIN1'])
+    df_estado['Mutacao_BIN1'] = df_estado['Mutacao_BIN1'].astype(str)
+    df_teste = df_estado[df_estado['Mutacao_BIN1'].isin(ordem_genotipos)].copy()
+    
+    # Separando os grupos para o Kruskal-Wallis
+    g0 = df_teste[df_teste['Mutacao_BIN1'] == '0/0']['Porcentagem']
+    g1 = df_teste[df_teste['Mutacao_BIN1'] == '0/1']['Porcentagem']
+    g2 = df_teste[df_teste['Mutacao_BIN1'] == '1/1']['Porcentagem']
+    
+    # Calculando p-valor
+    stat, p_valor = kruskal(g0, g1, g2)
+    
+    # Plot do Boxplot
+    sns.boxplot(
+        data=df_teste,
+        x='Mutacao_BIN1',
+        y='Porcentagem',
+        order=ordem_genotipos,
+        color='lightgray',
+        showfliers=False,
+        ax=ax
+    )
+    
+    # Plot do Stripplot
+    sns.stripplot(
+        data=df_teste,
+        x='Mutacao_BIN1',
+        y='Porcentagem',
+        order=ordem_genotipos,
+        palette=cores,
+        size=7,
+        jitter=True,
+        alpha=0.7,
+        hue='Mutacao_BIN1',
+        legend=False,
+        ax=ax
+    )
+    
+    # Textos e Eixos
+    nome_curto = estado.split('(')[0].strip()
+    ax.set_title(f"{nome_curto}", fontsize=14)
+    ax.set_xlabel("Genótipo BIN1 (rs6733839)", fontsize=12)
+    ax.set_ylabel("Proporção no Doador (%)", fontsize=12)
+    
+    # Posicionamento dinâmico do p-valor na caixa de texto
+    ymax = df_teste['Porcentagem'].max()
+    pos_y = ymax * 0.90 if ymax > 0 else 0.5
+    
+    ax.text(
+        x=1, y=pos_y,  # Centralizado no genótipo 0/1
+        s=f"Kruskal-Wallis p = {p_valor:.4f}",
+        ha='center', va='center', fontsize=12,
+        bbox=dict(facecolor='white', alpha=0.9, edgecolor='gray', boxstyle='round,pad=0.5')
+    )
+
+# Removendo subplots vazios caso haja número ímpar de clusters
+for j in range(i + 1, len(axes)):
+    fig.delaxes(axes[j])
+
+# Título Geral
+plt.suptitle("Painel Integrado: Abundância Microglial por Genótipo BIN1 (rs6733839)", fontsize=18, y=1.02)
+plt.tight_layout()
+
+# Salvando a figura
+plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Integrado_Abundancia_Genotipo.png", dpi=300, bbox_inches="tight")
+plt.close()
+
+print("Painel integrado de abundância por genótipo concluído!")
+
+
+# PAINEL INTEGRADO: Abundância Celular - Modelo Recessivo (Mann-Whitney)
+# ===========================================================
+print("\n=== Gerando Painel Integrado de Abundância por Modelo Recessivo ===")
+
+# Configurações do grid
+n_plots = len(estados_celulares)
+colunas = 2
+linhas = int(np.ceil(n_plots / colunas))
+
+fig, axes = plt.subplots(linhas, colunas, figsize=(16, 6 * linhas))
+axes = axes.flatten()
+
+ordem_agrupada = ['0/0 + 0/1', '1/1 (Homozigoto Recessivo)']
+cores_agrupadas = {'0/0 + 0/1': '#440154', '1/1 (Homozigoto Recessivo)': '#21918c'}
+
+for i, estado in enumerate(estados_celulares):
+    ax = axes[i]
+    
+    # Montando o DataFrame específico
+    df_estado = pd.DataFrame({
+        'Porcentagem': proporcao_doador[estado]
     })
     
     # Mesclando com os metadados do paciente
@@ -405,7 +648,6 @@ for estado in estados_celulares:
     df_teste = df_estado[df_estado['Mutacao_BIN1'].isin(['0/0', '0/1', '1/1'])].copy()
     
     # Agrupamento em Modelo Recessivo (1/1 vs Outros)
-    
     mapeamento_recessivo = {
         '0/0': '0/0 + 0/1', 
         '0/1': '0/0 + 0/1', 
@@ -413,29 +655,25 @@ for estado in estados_celulares:
     }
     df_teste['Agrupamento_BIN1'] = df_teste['Mutacao_BIN1'].map(mapeamento_recessivo)
     
-    ordem_agrupada = ['0/0 + 0/1', '1/1 (Homozigoto Recessivo)']
-    cores_agrupadas = {'0/0 + 0/1': '#440154', '1/1 (Homozigoto Recessivo)': '#21918c'}
-    
     # Separando as distribuições matemáticas
     grupo_outros = df_teste[df_teste['Agrupamento_BIN1'] == '0/0 + 0/1']['Porcentagem']
     grupo_11 = df_teste[df_teste['Agrupamento_BIN1'] == '1/1 (Homozigoto Recessivo)']['Porcentagem']
     
-    # Teste de Mann-Whitney U (Ideal para 2 grupos)
+    # Teste de Mann-Whitney U
     stat, p_valor = mannwhitneyu(grupo_outros, grupo_11, alternative='two-sided')
-    print(f"P-valor (Mann-Whitney U): {p_valor:.4f}")
     
-    # PLOT
-    plt.figure(figsize=(8, 6))
-    
+    # Plot do Boxplot
     sns.boxplot(
         data=df_teste,
         x='Agrupamento_BIN1',
         y='Porcentagem',
         order=ordem_agrupada,
         color='lightgray',
-        showfliers=False
+        showfliers=False,
+        ax=ax
     )
     
+    # Plot do Stripplot
     sns.stripplot(
         data=df_teste,
         x='Agrupamento_BIN1',
@@ -443,36 +681,346 @@ for estado in estados_celulares:
         order=ordem_agrupada,
         hue='Agrupamento_BIN1',
         palette=cores_agrupadas,
-        size=8,
+        size=7,
         jitter=True,
         alpha=0.7,
-        legend=False
+        legend=False,
+        ax=ax
     )
     
-    # Ajustando o título para não ficar gigante
+    # Ajustando textos e eixos do subplot
     nome_curto = estado.split('(')[0].strip()
+    ax.set_title(f"{nome_curto}", fontsize=14)
+    ax.set_xlabel("Modelo Recessivo BIN1", fontsize=12)
+    ax.set_ylabel("Proporção no Doador (%)", fontsize=12)
     
-    plt.title(f"Abundância: {nome_curto}\nHomozigoto Recessivo vs Outros")
-    plt.xlabel("Modelo Recessivo BIN1")
-    plt.ylabel("Proporção no Doador (%)")
-    
-    # Prevenção matemática para o texto do p-valor
+    # Posicionamento dinâmico do p-valor na caixa de texto
     ymax = df_teste['Porcentagem'].max()
-    pos_y = ymax * 0.95 if ymax > 0 else 0.5
+    pos_y = ymax * 0.90 if ymax > 0 else 0.5
     
-    plt.text(
-        x=0.5, y=pos_y,  # Centralizado entre os dois boxplots
-        s=f"Mann-Whitney p-valor = {p_valor:.4f}",
+    ax.text(
+        x=0.5, y=pos_y,  # Posição 0.5 fica centralizada entre os dois grupos no eixo X
+        s=f"Mann-Whitney p = {p_valor:.4f}",
         ha='center', va='center', fontsize=12,
         bbox=dict(facecolor='white', alpha=0.9, edgecolor='gray', boxstyle='round,pad=0.5')
     )
+
+# Removendo subplots vazios caso haja número ímpar de clusters
+for j in range(i + 1, len(axes)):
+    fig.delaxes(axes[j])
+
+# Título Geral para a figura inteira
+plt.suptitle("Painel Integrado: Abundância Microglial por Modelo Recessivo BIN1\n(Homozigoto Recessivo vs Outros)", fontsize=18, y=1.05)
+plt.tight_layout()
+
+# Salvando a figura
+plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Integrado_Recessivo.png", dpi=300, bbox_inches="tight")
+plt.close()
+
+print("Painel integrado do modelo recessivo concluído!")
+    
+# ============================================================
+# INVESTIGAÇÃO DE VIÉS: Abundância Celular por Estágio de Braak (Painel Integrado)
+# ============================================================
+print("\n=== Gerando Painel Integrado de Stripplots por Estágio de Braak ===")
+
+if 'Braak.stage' in adata_limpo.obs.columns:
+    
+    # Pegando todos os nomes dos clusters validados
+    estados_celulares = proporcao_doador.columns.tolist()
+    n_plots = len(estados_celulares)
+    
+    # Configurando o grid (2 colunas, linhas dinâmicas dependendo da quantidade de clusters)
+    colunas = 2
+    linhas = int(np.ceil(n_plots / colunas))
+    
+    # Criando a figura grande com os subplots
+    fig, axes = plt.subplots(linhas, colunas, figsize=(16, 6 * linhas))
+    axes = axes.flatten() # Achata a matriz de eixos para facilitar o loop
+    
+    for i, estado in enumerate(estados_celulares):
+        ax = axes[i]
+        
+        # Montando o DataFrame específico
+        df_investigacao = pd.DataFrame({
+            'Porcentagem': proporcao_doador[estado]
+        })
+        
+        # Mesclando com o Estágio de Braak de cada paciente
+        df_investigacao = df_investigacao.merge(
+            pacientes_unicos[['donor_id', 'Braak.stage']].set_index('donor_id'), 
+            left_index=True, right_index=True
+        )
+        
+        # Limpando NAs
+        df_investigacao = df_investigacao.dropna(subset=['Braak.stage'])
+        
+        # Ordenando os estágios de Braak de forma cronológica/biológica
+        ordem_braak = sorted(df_investigacao['Braak.stage'].unique())
+        
+        # O boxplot por baixo mostra a verdadeira mediana (imune ao viés)
+        sns.boxplot(
+            data=df_investigacao,
+            x='Braak.stage',
+            y='Porcentagem',
+            order=ordem_braak,
+            color='lightgray',
+            showfliers=False,
+            ax=ax # Aponta para o subplot atual
+        )
+        
+        # O stripplot por cima mostra cada paciente (doador) como um ponto
+        sns.stripplot(
+            data=df_investigacao,
+            x='Braak.stage',
+            y='Porcentagem',
+            order=ordem_braak,
+            palette='viridis',
+            size=7,
+            jitter=True,
+            alpha=0.7,
+            hue='Braak.stage',
+            legend=False,
+            ax=ax # Aponta para o subplot atual
+        )
+        
+        # Ajustando o título para não ficar gigante
+        nome_curto = estado.split('(')[0].strip()
+        
+        ax.set_title(f"Distribuição de {nome_curto}", fontsize=14)
+        ax.set_xlabel("Estágio de Braak", fontsize=12)
+        ax.set_ylabel("Proporção no Doador (%)", fontsize=12)
+        
+    # Removendo eixos vazios caso o número de clusters seja ímpar
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+        
+    # Título geral para a figura inteira
+    plt.suptitle("Investigação de Viés: Proporção dos Estados Microgliais por Estágio de Braak\n(Cada ponto = 1 Paciente)", fontsize=18, y=1.02)
     
     plt.tight_layout()
     
-    # Salvando a figura
-    nome_arquivo = nome_curto.replace(' ', '_').replace('-', '').replace('/', '')
-    plt.savefig(f"bin1_mutation/figures/todos_genotipos/Abundancia_Recessivo_{nome_arquivo}.png", dpi=300, bbox_inches="tight")
-    
+    # Salvando o painel completo
+    plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Stripplots_Braak.png", dpi=300, bbox_inches="tight")
     plt.close()
+        
+    print("Painel integrado salvo com sucesso!")
+else:
+    print("Atenção: Coluna 'Braak.stage' não encontrada.")
+    
+    
+# 2. PAINEL DE STRIPPLOTS (INVESTIGAÇÃO DE VIÉS - THAL.PHASE)
+print("Gerando Painel Integrado de Stripplots por Fase de Thal...")
+    
+estados_celulares = proporcao_doador.columns.tolist()
+n_plots = len(estados_celulares)
+
+colunas = 2
+linhas = int(np.ceil(n_plots / colunas))
+
+fig, axes = plt.subplots(linhas, colunas, figsize=(16, 6 * linhas))
+axes = axes.flatten() 
+
+for i, estado in enumerate(estados_celulares):
+    ax = axes[i]
+    
+    df_investigacao_thal = pd.DataFrame({
+        'Porcentagem': proporcao_doador[estado]
+    })
+    
+    df_investigacao_thal = df_investigacao_thal.merge(
+        pacientes_unicos[['donor_id', 'Thal.phase']].set_index('donor_id'), 
+        left_index=True, right_index=True
+    )
+    
+    df_investigacao_thal = df_investigacao_thal.dropna(subset=['Thal.phase'])
+    
+    # Garantindo ordem biológica (Fase 0 a 5, etc)
+    ordem_thal = sorted(df_investigacao_thal['Thal.phase'].unique())
+    
+    sns.boxplot(
+        data=df_investigacao_thal,
+        x='Thal.phase',
+        y='Porcentagem',
+        order=ordem_thal,
+        color='lightgray',
+        showfliers=False,
+        ax=ax 
+    )
+    
+    sns.stripplot(
+        data=df_investigacao_thal,
+        x='Thal.phase',
+        y='Porcentagem',
+        order=ordem_thal,
+        palette='magma', # Mudando a paleta para diferenciar do Braak (viridis)
+        size=7,
+        jitter=True,
+        alpha=0.7,
+        hue='Thal.phase',
+        legend=False,
+        ax=ax 
+    )
+    
+    nome_curto = estado.split('(')[0].strip()
+    
+    ax.set_title(f"Distribuição de {nome_curto}", fontsize=14)
+    ax.set_xlabel("Fase de Thal", fontsize=12)
+    ax.set_ylabel("Proporção no Doador (%)", fontsize=12)
+    
+for j in range(i + 1, len(axes)):
+    fig.delaxes(axes[j])
+    
+plt.suptitle("Investigação de Viés: Proporção dos Estados Microgliais por Fase de Thal\n(Cada ponto = 1 Paciente)", fontsize=18, y=1.02)
+
+plt.tight_layout()
+plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Stripplots_Thal.png", dpi=300, bbox_inches="tight")
+plt.close()
+    
+print("Análises da Fase de Thal concluídas com sucesso!")
+
+
+# PAINEL DE STRIPPLOTS (INVESTIGAÇÃO DE VIÉS - CERAD)
+
+print("Gerando Painel Integrado de Stripplots por Escore CERAD...")
+
+estados_celulares = proporcao_doador.columns.tolist()
+n_plots = len(estados_celulares)
+
+colunas = 2
+linhas = int(np.ceil(n_plots / colunas))
+
+fig, axes = plt.subplots(linhas, colunas, figsize=(16, 6 * linhas))
+axes = axes.flatten() 
+
+for i, estado in enumerate(estados_celulares):
+    ax = axes[i]
+    
+    df_investigacao_cerad = pd.DataFrame({
+        'Porcentagem': proporcao_doador[estado]
+    })
+    
+    df_investigacao_cerad = df_investigacao_cerad.merge(
+        pacientes_unicos[['donor_id', 'CERAD.score']].set_index('donor_id'), 
+        left_index=True, right_index=True
+    )
+    
+    df_investigacao_cerad = df_investigacao_cerad.dropna(subset=['CERAD.score'])
+    
+    # Garantindo ordem crescente/alfabética dos escores
+    ordem_cerad = sorted(df_investigacao_cerad['CERAD.score'].unique())
+    
+    # O Boxplot base
+    sns.boxplot(
+        data=df_investigacao_cerad,
+        x='CERAD.score',
+        y='Porcentagem',
+        order=ordem_cerad,
+        color='lightgray',
+        showfliers=False,
+        ax=ax 
+    )
+    
+    # O Stripplot sobreposto
+    sns.stripplot(
+        data=df_investigacao_cerad,
+        x='CERAD.score',
+        y='Porcentagem',
+        order=ordem_cerad,
+        palette='inferno', # Nova paleta
+        size=7,
+        jitter=True,
+        alpha=0.7,
+        hue='CERAD.score',
+        legend=False,
+        ax=ax 
+    )
+    
+    nome_curto = estado.split('(')[0].strip()
+    
+    ax.set_title(f"Distribuição de {nome_curto}", fontsize=14)
+    ax.set_xlabel("Escore CERAD", fontsize=12)
+    ax.set_ylabel("Proporção no Doador (%)", fontsize=12)
+    
+# Limpando subplots vazios, se houver
+for j in range(i + 1, len(axes)):
+    fig.delaxes(axes[j])
+    
+plt.suptitle("Investigação de Viés: Proporção dos Estados Microgliais por Escore CERAD\n(Cada ponto = 1 Paciente)", fontsize=18, y=1.02)
+
+plt.tight_layout()
+plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Stripplots_CERAD.png", dpi=300, bbox_inches="tight")
+plt.close()
+    
+print("Análises do CERAD concluídas com sucesso!")
+
+# PAINEL DE STRIPPLOTS (INVESTIGAÇÃO DE VIÉS - ADNC)
+print("Gerando Painel Integrado de Stripplots por ADNC...")
+
+estados_celulares = proporcao_doador.columns.tolist()
+n_plots = len(estados_celulares)
+
+colunas = 2
+linhas = int(np.ceil(n_plots / colunas))
+
+fig, axes = plt.subplots(linhas, colunas, figsize=(16, 6 * linhas))
+axes = axes.flatten() 
+
+for i, estado in enumerate(estados_celulares):
+    ax = axes[i]
+    
+    df_investigacao_adnc = pd.DataFrame({
+        'Porcentagem': proporcao_doador[estado]
+    })
+    
+    df_investigacao_adnc = df_investigacao_adnc.merge(
+        pacientes_unicos[['donor_id', 'ADNC']].set_index('donor_id'), 
+        left_index=True, right_index=True
+    )
+    
+    df_investigacao_adnc = df_investigacao_adnc.dropna(subset=['ADNC'])
+    
+    # O Boxplot base
+    sns.boxplot(
+        data=df_investigacao_adnc,
+        x='ADNC',
+        y='Porcentagem',
+        order=ordem_adnc,
+        color='lightgray',
+        showfliers=False,
+        ax=ax 
+    )
+    
+    # O Stripplot sobreposto
+    sns.stripplot(
+        data=df_investigacao_adnc,
+        x='ADNC',
+        y='Porcentagem',
+        order=ordem_adnc,
+        palette='plasma', # Paleta diferente para distinguir visualmente (viridis -> magma -> plasma)
+        size=7,
+        jitter=True,
+        alpha=0.7,
+        hue='ADNC',
+        legend=False,
+        ax=ax 
+    )
+    
+    nome_curto = estado.split('(')[0].strip()
+    
+    ax.set_title(f"Distribuição de {nome_curto}", fontsize=14)
+    ax.set_xlabel("ADNC (Gravidade Neuropatológica)", fontsize=12)
+    ax.set_ylabel("Proporção no Doador (%)", fontsize=12)
+    
+for j in range(i + 1, len(axes)):
+    fig.delaxes(axes[j])
+    
+plt.suptitle("Investigação de Viés: Proporção dos Estados Microgliais por Consenso ADNC\n(Cada ponto = 1 Paciente)", fontsize=18, y=1.02)
+
+plt.tight_layout()
+plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Stripplots_ADNC.png", dpi=300, bbox_inches="tight")
+plt.close()
+    
+print("Análises de ADNC concluídas com sucesso!")
 
 # adata_limpo.write_h5ad("bin1_mutation/adata_limpo_anotado.h5ad", compression='gzip')
