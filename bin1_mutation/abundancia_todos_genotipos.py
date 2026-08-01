@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import scanpy as sc
 import scanpy.external as sce
@@ -10,6 +11,14 @@ from scipy.stats import kruskal # cálculo do p-valor baseado nas proporções.
 from scipy.stats import mannwhitneyu
 
 adata = sc.read_h5ad("bin1_mutation/BIN1_Mutation.h5ad")
+
+# Resolução de Leiden atual
+
+res_teste = "0.3"
+
+pasta_saida = f"bin1_mutation/figures/resolucao_{res_teste}"
+
+os.makedirs(pasta_saida, exist_ok=True) # Criando a pasta caso ela não exista
 
 
 # =========================================================
@@ -58,7 +67,7 @@ for marcador in marcadores_clinicos:
         plt.xlabel(marcador)
         plt.tight_layout()
         nome_arquivo = marcador.replace('.', '_').replace(' ', '_')
-        plt.savefig(f"bin1_mutation/figures/todos_genotipos/heatmap_{nome_arquivo}_bin1.png", dpi=300, bbox_inches="tight")
+        plt.savefig(f"{pasta_saida}/heatmap_{nome_arquivo}_bin1.png", dpi=300, bbox_inches="tight")
         #plt.show()
     else:
         print(f"A coluna '{marcador}' não foi encontrada em adata.obs")
@@ -78,7 +87,7 @@ sce.pp.harmony_integrate(adata, key='donor_id')
 
 sc.pp.neighbors(adata, use_rep='X_pca_harmony') # Use reprentative
 
-resolucoes = [0.05, 0.1, 0.15, 0.175, 0.2, 0.25]
+resolucoes = [0.275, 0.3, 0.325, 0.35, 0.375, 0.4] 
 for res in resolucoes:
     sc.tl.leiden(adata, resolution=res, key_added=f'leiden_{res}', flavor="igraph")
 
@@ -95,7 +104,7 @@ clustree(
     title="Estabilidade dos Clusters (Fine Tuning) - Micróglias"
 )
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/todos_genotipos/Fine Tuning da Estabilidade dos Clusters - Micróglias.png", dpi=300, bbox_inches="tight" )
+plt.savefig(f"{pasta_saida}/Fine Tuning da Estabilidade dos Clusters - Micróglias.png", dpi=300, bbox_inches="tight" )
 #plt.show()
 
 #=============================================================
@@ -136,7 +145,7 @@ plt.title(f"Correspondência: Leiden {res_vencedora} vs SEA_AD Supertype (%)")
 plt.xlabel(f"Clusters Leiden (Resolução {res_vencedora})")
 plt.ylabel("Anotação Original SEA-AD (Supertype)")
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/todos_genotipos/Heatmap_Contigencia_Best_Resolution.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"{pasta_saida}/Heatmap_Contigencia_Best_Resolution.png", dpi=300, bbox_inches="tight")
 #plt.show()
 
 #A resolução Ideal é 0.15
@@ -147,15 +156,15 @@ plt.savefig("bin1_mutation/figures/todos_genotipos/Heatmap_Contigencia_Best_Reso
 
 sc.tl.umap(adata)
 
-clusters = {
+'''clusters = {
     '0': 'Micróglia Homeostática Basal (ADAM7-AS1+, DLEU7+)',
     '1': 'Micróglia Homeostática Fagocítica (FRMD4A+, PLXDC2+)',
     '2': 'Micróglia Associada à Doença - DAM (SPP1+ alto, FTH1+)',
     '3': 'Ruído Técnico / Doublets Neuronais (CADM2+, NRG3+)',
     '4': 'Micróglia Ativada por Estresse Metabólico (HIF1A+, SPP1+ mod)'
-}
+}'''
 # Mapeando os nomes matemáticos para uma nova coluna biológica
-adata.obs['Estado_Microglial'] = adata.obs['leiden_0.15'].astype(str).map(clusters)
+adata.obs['Estado_Microglial'] = adata.obs[f'leiden_{res_teste}'].astype(str)
 
 sc.pl.umap(
     adata,
@@ -164,7 +173,7 @@ sc.pl.umap(
     palette='Set1',
     show=False
 )
-plt.savefig("bin1_mutation/figures/todos_genotipos/UMAP_Anotado.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"{pasta_saida}/UMAP_Anotado.png", dpi=300, bbox_inches="tight")
 #plt.show()
 
 #=============================================================
@@ -180,9 +189,9 @@ genes_ruido = [gene for gene in adata.var_names if gene == "MALAT1" or gene.star
 
 adata_limpo = adata[:, ~adata.var_names.isin(genes_ruido)].copy()
 
-adata_limpo = adata_limpo[adata_limpo.obs['Estado_Microglial'] != 'Ruído Técnico / Doublets Neuronais (CADM2+, NRG3+)'].copy()
+#adata_limpo = adata_limpo[adata_limpo.obs['Estado_Microglial'] != 'Ruído Técnico / Doublets Neuronais (CADM2+, NRG3+)'].copy()
 
-adata_limpo.obs['Estado_Microglial'] = adata_limpo.obs['Estado_Microglial'].cat.remove_unused_categories()
+#adata_limpo.obs['Estado_Microglial'] = adata_limpo.obs['Estado_Microglial'].cat.remove_unused_categories()
 
 # Backup bruto: dados brutos para o pseudobulk
 adata_limpo.raw = adata_limpo
@@ -192,30 +201,30 @@ adata_limpo.raw = adata_limpo
 sc.pp.normalize_total(adata_limpo, target_sum=1e4)
 sc.pp.log1p(adata_limpo)
 
-sc.tl.rank_genes_groups(adata_limpo, groupby='leiden_0.15', method='wilcoxon', key_added='marcadores_wilcoxon')
+sc.tl.rank_genes_groups(adata_limpo, groupby=f'leiden_{res_teste}', method='wilcoxon', key_added='marcadores_wilcoxon')
 
 # Dotplot para top 5 genes de cada cluster
 
 # Organizando o dotplot
-sc.tl.dendrogram(adata_limpo, groupby='leiden_0.15')
+sc.tl.dendrogram(adata_limpo, groupby=f'leiden_{res_teste}')
 
 sc.pl.rank_genes_groups_dotplot(
     adata_limpo,
     n_genes=5,
     key='marcadores_wilcoxon',
-    groupby='leiden_0.15',
-    title="Top 5 Genes Marcadores por Cluster (Leiden 0.15)",
+    groupby=f'leiden_{res_teste}',
+    title=f"Top 5 Genes Marcadores por Cluster (Leiden {res_teste})",
     show=False 
 )
 
-plt.savefig("bin1_mutation/figures/todos_genotipos/top5_marcadores_limpo.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"{pasta_saida}/top5_marcadores_limpo.png", dpi=300, bbox_inches="tight")
 #plt.show()
 
 # ============================================================
 # Etapa 6: Impacto da Mutação nas Proporções Celulares
 # ============================================================
 
-# Atualizando a variável subclass por leiden_0.15: Impacto da mutação nas proporções
+# Atualizando a variável subclass por leiden_{res_teste}: Impacto da mutação nas proporções
 
 contagem_celulas = pd.crosstab( # Cruzando o genótipo com os clusters validados
     adata_limpo.obs['Mutacao_BIN1'],
@@ -224,23 +233,23 @@ contagem_celulas = pd.crosstab( # Cruzando o genótipo com os clusters validados
 ) * 100
 
 # Forçando a ordem lógica (biológica) das colunas
-ordem_desejada = [
+'''ordem_desejada = [
     'Micróglia Homeostática Basal (ADAM7-AS1+, DLEU7+)', 
     'Micróglia Homeostática Fagocítica (FRMD4A+, PLXDC2+)', 
     'Micróglia Ativada por Estresse Metabólico (HIF1A+, SPP1+ mod)', 
     'Micróglia Associada à Doença - DAM (SPP1+ alto, FTH1+)' 
-]
-contagem_celulas = contagem_celulas[ordem_desejada]
+]'''
+#contagem_celulas = contagem_celulas[ordem_desejada]
 
 #Gráfico de barras empilhadas
 
 contagem_celulas.plot(kind='bar', stacked=True, figsize=(10,6), colormap='viridis')
-plt.title("Distribuição dos Estados Microgliais (Leiden 0.15) por Genótipo BIN1")
+plt.title(f"Distribuição dos Estados Microgliais (Leiden {res_teste}) por Genótipo BIN1")
 plt.ylabel("Proporção das células (%)")
 plt.xlabel("Genótipo BIN1 (rs6733839)")
 plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/todos_genotipos/Proporção_clusters_BIN1_limpo.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"{pasta_saida}/Proporção_clusters_BIN1_limpo.png", dpi=300, bbox_inches="tight")
 #plt.show()
 
 # Impacto do Estágio de Braak nas Proporções Celulares
@@ -261,17 +270,17 @@ if 'Braak.stage' in adata_limpo.obs.columns:
     ) * 100
 
     # Forçando a mesma ordem lógica (biológica) das colunas usada no gráfico anterior
-    contagem_braak = contagem_braak[ordem_desejada]
+    #contagem_braak = contagem_braak[ordem_desejada]
 
     # Gráfico de barras empilhadas
     contagem_braak.plot(kind='bar', stacked=True, figsize=(10,6), colormap='viridis')
-    plt.title("Distribuição dos Estados Microgliais (Leiden 0.15) por Estágio de Braak")
+    plt.title(f"Distribuição dos Estados Microgliais (Leiden {res_teste}) por Estágio de Braak")
     plt.ylabel("Proporção das células (%)")
     plt.xlabel("Estágio de Braak (Progressão da Patologia)")
     plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
     plt.tight_layout()
     
-    plt.savefig("bin1_mutation/figures/todos_genotipos/Proporcao_clusters_Braak_limpo.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"{pasta_saida}/Proporcao_clusters_Braak_limpo.png", dpi=300, bbox_inches="tight")
     plt.close()
     
     print("Gráfico de Braak salvo com sucesso!")
@@ -297,17 +306,17 @@ if 'Thal.phase' in adata_limpo.obs.columns:
     ) * 100
 
     # Forçando a mesma ordem lógica (biológica) das colunas
-    contagem_thal = contagem_thal[ordem_desejada]
+    #contagem_thal = contagem_thal[ordem_desejada]
 
     # Plot
     contagem_thal.plot(kind='bar', stacked=True, figsize=(10,6), colormap='viridis')
-    plt.title("Distribuição dos Estados Microgliais (Leiden 0.15) por Fase de Thal")
+    plt.title(f"Distribuição dos Estados Microgliais (Leiden {res_teste}) por Fase de Thal")
     plt.ylabel("Proporção das células (%)")
     plt.xlabel("Fase de Thal (Acúmulo de Beta-amiloide)")
     plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
     plt.tight_layout()
     
-    plt.savefig("bin1_mutation/figures/todos_genotipos/Proporcao_clusters_Thal_limpo.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"{pasta_saida}/Proporcao_clusters_Thal_limpo.png", dpi=300, bbox_inches="tight")
     plt.close()
     
 # Impacto do Escore CERAD nas Proporções Celulares
@@ -329,17 +338,17 @@ if 'CERAD.score' in adata_limpo.obs.columns:
     ) * 100
 
     # Forçando a ordem lógica (biológica) das colunas (Clusters)
-    contagem_cerad = contagem_cerad[ordem_desejada]
+    #contagem_cerad = contagem_cerad[ordem_desejada]
 
     # Plot
     contagem_cerad.plot(kind='bar', stacked=True, figsize=(10,6), colormap='viridis')
-    plt.title("Distribuição dos Estados Microgliais (Leiden 0.15) por Escore CERAD")
+    plt.title(f"Distribuição dos Estados Microgliais (Leiden {res_teste}) por Escore CERAD")
     plt.ylabel("Proporção das células (%)")
     plt.xlabel("Escore CERAD (Densidade de Placas Neuríticas)")
     plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
     plt.tight_layout()
     
-    plt.savefig("bin1_mutation/figures/todos_genotipos/Proporcao_clusters_CERAD_limpo.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"{pasta_saida}/Proporcao_clusters_CERAD_limpo.png", dpi=300, bbox_inches="tight")
     plt.close()
     
 # Impacto do ADNC (Consenso Global) nas Proporções Celulares
@@ -361,19 +370,19 @@ if 'ADNC' in adata_limpo.obs.columns:
     ) * 100
 
     # Forçando a ordem lógica biológica das colunas (Clusters) e das linhas (Gravidade)
-    contagem_adnc = contagem_adnc[ordem_desejada]
+    #contagem_adnc = contagem_adnc[ordem_desejada]
     ordem_adnc = ['Low', 'Intermediate', 'High']
     contagem_adnc = contagem_adnc.reindex(ordem_adnc)
 
     # Plot
     contagem_adnc.plot(kind='bar', stacked=True, figsize=(10,6), colormap='viridis')
-    plt.title("Distribuição dos Estados Microgliais (Leiden 0.15) por Gravidade ADNC")
+    plt.title(f"Distribuição dos Estados Microgliais (Leiden {res_teste}) por Gravidade ADNC")
     plt.ylabel("Proporção das células (%)")
     plt.xlabel("ADNC (Gravidade Neuropatológica Global)")
     plt.legend(title="Cluster (Estado Celular)", bbox_to_anchor=(1.05, 1), loc ='upper left')
     plt.tight_layout()
     
-    plt.savefig("bin1_mutation/figures/todos_genotipos/Proporcao_clusters_ADNC_limpo.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"{pasta_saida}/Proporcao_clusters_ADNC_limpo.png", dpi=300, bbox_inches="tight")
     plt.close()
 
 #=============================================================
@@ -398,26 +407,46 @@ for gene in genes_alvo:
         'Ancestralidade': adata_limpo.obs['ethnicity']
     })
     
-    # Violin Plot
     plt.figure(figsize=(10, 6))
-    sns.violinplot(
+    
+    # Boxplot Base
+    sns.boxplot(
         data=df_ancestralidade,
         x='Genótipo',
         y='Expressão',
         hue='Ancestralidade',
         palette='Set2',
-        inner="quartile",
-        linewidth=1.2,
-        density_norm="width"
+        showfliers=False,       # Oculta os outliers do boxplot (para o stripplot mostrá-los)
+        width=0.6,              # Deixa a caixa um pouco mais fina para ficar elegante
+        boxprops={'alpha': 0.7} # Dá uma leve transparência na cor da caixa
+    )
+    
+    # Stripplot (Pontos reais por cima)
+    sns.stripplot(
+        data=df_ancestralidade,
+        x='Genótipo',
+        y='Expressão',
+        hue='Ancestralidade',
+        dodge=True,             # Força os pontos a acompanharem a posição de cada caixa
+        alpha=0.3,              # Pontos semi-transparentes para mostrar acúmulo (zeros)
+        size=3,
+        color='black',          # Todos os pontos pretos (contrasta com a caixa colorida)
+        legend=False            # Impede que crie uma legenda duplicada
     )
     
     plt.title(f"Distribuição da Expressão de {gene} por Genótipo e Ancestralidade")
     plt.ylabel(f"Expressão Normalizada ({gene})")
     plt.xlabel("Genótipo BIN1 (rs6733839)")
-    plt.legend(title="Ancestralidade", bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.tight_layout()
     
-    plt.savefig(f"bin1_mutation/figures/todos_genotipos/Expressão_{gene}_Ancestralidade_limpo.png", dpi=300, bbox_inches="tight")
+    # Ajustando a legenda para pegar apenas as cores do boxplot
+    handles, labels = plt.gca().get_legend_handles_labels()
+    plt.legend(handles[:len(df_ancestralidade['Ancestralidade'].unique())], 
+               labels[:len(df_ancestralidade['Ancestralidade'].unique())], 
+               title="Ancestralidade", bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    plt.tight_layout()
+    plt.savefig(f"{pasta_saida}/Expressão_{gene}_Ancestralidade_limpo.png", dpi=300, bbox_inches="tight")
+    plt.close()
     #plt.show()
     
 # ===========================================================
@@ -425,28 +454,6 @@ for gene in genes_alvo:
 # ===========================================================
 
 print("\n=== Gerando gráficos de expressão de BIN1 por cluster ===")
-
-# Gráfico Básico Nativo do Scanpy (Apenas Clusters)
-
-fig, ax = plt.subplots(figsize=(14, 7))
-
-sc.pl.violin(
-    adata_limpo, 
-    keys=['BIN1'], 
-    groupby='Estado_Microglial', 
-    rotation=45, 
-    palette='Set2',
-    ax=ax,              # Ancora o desenho do scanpy na "tela" customizada
-    show=False
-)
-plt.title("Expressão de BIN1 por Estado Microglial")
-plt.xticks(fontsize=12, ha='right') # Aumentando a fonte e centralizando a ponta do texto sob o violino
-plt.yticks(fontsize=12)
-plt.ylabel("Expressão Normalizada (BIN1)", fontsize=12)
-plt.xlabel("") # Removendo o título do eixo X para limpar espaço
-plt.tight_layout()
-plt.savefig("bin1_mutation/figures/todos_genotipos/Violin_BIN1_Apenas_Clusters.png", dpi=300, bbox_inches="tight")
-plt.close()
 
 # Gráfico Avançado Seaborn (Clusters divididos pelo Modelo Recessivo)
 
@@ -470,21 +477,34 @@ df_bin1_cluster = pd.DataFrame({
     'Genótipo_Recessivo': adata_limpo.obs['Mutacao_BIN1'].map(mapeamento_recessivo)
 })
 
-# Removendo NAs (caso algum paciente não tenha o genótipo catalogado)
+# Removendo NAs
 df_bin1_cluster = df_bin1_cluster.dropna(subset=['Genótipo_Recessivo'])
 
-# Plotando o violino dividido (split)
 plt.figure(figsize=(14, 7))
-sns.violinplot(
+
+# Boxplot Base
+sns.boxplot(
     data=df_bin1_cluster,
     x='Estado_Microglial',
     y='Expressão_BIN1',
     hue='Genótipo_Recessivo',
-    split=True,         # Juntando as duas metades no mesmo violin
-    inner="quart",      # Mostrando os quartis matemáticos por dentro
-    linewidth=1.2,
-    cut=0,
-    palette={'0/0 + 0/1': '#bcbddc', '1/1 (Homozigoto Recessivo)': '#a1d99b'}
+    palette={'0/0 + 0/1': '#bcbddc', '1/1 (Homozigoto Recessivo)': '#a1d99b'},
+    showfliers=False,
+    width=0.6,
+    boxprops={'alpha': 0.8}
+)
+
+# Stripplot (Pontos reais por cima)
+sns.stripplot(
+    data=df_bin1_cluster,
+    x='Estado_Microglial',
+    y='Expressão_BIN1',
+    hue='Genótipo_Recessivo',
+    dodge=True,
+    alpha=0.25,
+    size=2.5,
+    color='black',
+    legend=False
 )
 
 plt.xticks(rotation=45, ha='right', fontsize=12)
@@ -492,10 +512,13 @@ plt.yticks(fontsize=12)
 plt.title("Expressão de BIN1 por Estado Microglial e Genótipo (Modelo Recessivo)")
 plt.ylabel("Expressão Normalizada (BIN1)", fontsize=12)
 plt.xlabel("")
-plt.legend(title="Modelo Genético", bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=11, title_fontsize=12)
-plt.tight_layout()
 
-plt.savefig("bin1_mutation/figures/todos_genotipos/Violin_BIN1_Clusters_e_Recessivo.png", dpi=300, bbox_inches="tight")
+# Corrigindo a legenda para evitar duplicação pelo stripplot
+handles, labels = plt.gca().get_legend_handles_labels()
+plt.legend(handles[:2], labels[:2], title="Modelo Genético", bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=11, title_fontsize=12)
+
+plt.tight_layout()
+plt.savefig(f"{pasta_saida}/Boxplot_BIN1_Clusters_e_Recessivo.png", dpi=300, bbox_inches="tight")
 plt.close()
     
 # ===========================================================
@@ -607,7 +630,7 @@ plt.suptitle("Painel Integrado: Abundância Microglial por Genótipo BIN1 (rs673
 plt.tight_layout()
 
 # Salvando a figura
-plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Integrado_Abundancia_Genotipo.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"{pasta_saida}/Painel_Integrado_Abundancia_Genotipo.png", dpi=300, bbox_inches="tight")
 plt.close()
 
 print("Painel integrado de abundância por genótipo concluído!")
@@ -714,7 +737,7 @@ plt.suptitle("Painel Integrado: Abundância Microglial por Modelo Recessivo BIN1
 plt.tight_layout()
 
 # Salvando a figura
-plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Integrado_Recessivo.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"{pasta_saida}/Painel_Integrado_Recessivo.png", dpi=300, bbox_inches="tight")
 plt.close()
 
 print("Painel integrado do modelo recessivo concluído!")
@@ -801,7 +824,7 @@ if 'Braak.stage' in adata_limpo.obs.columns:
     plt.tight_layout()
     
     # Salvando o painel completo
-    plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Stripplots_Braak.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"{pasta_saida}/Painel_Stripplots_Braak.png", dpi=300, bbox_inches="tight")
     plt.close()
         
     print("Painel integrado salvo com sucesso!")
@@ -874,7 +897,7 @@ for j in range(i + 1, len(axes)):
 plt.suptitle("Investigação de Viés: Proporção dos Estados Microgliais por Fase de Thal\n(Cada ponto = 1 Paciente)", fontsize=18, y=1.02)
 
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Stripplots_Thal.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"{pasta_saida}/Painel_Stripplots_Thal.png", dpi=300, bbox_inches="tight")
 plt.close()
     
 print("Análises da Fase de Thal concluídas com sucesso!")
@@ -949,7 +972,7 @@ for j in range(i + 1, len(axes)):
 plt.suptitle("Investigação de Viés: Proporção dos Estados Microgliais por Escore CERAD\n(Cada ponto = 1 Paciente)", fontsize=18, y=1.02)
 
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Stripplots_CERAD.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"{pasta_saida}/Painel_Stripplots_CERAD.png", dpi=300, bbox_inches="tight")
 plt.close()
     
 print("Análises do CERAD concluídas com sucesso!")
@@ -1018,7 +1041,7 @@ for j in range(i + 1, len(axes)):
 plt.suptitle("Investigação de Viés: Proporção dos Estados Microgliais por Consenso ADNC\n(Cada ponto = 1 Paciente)", fontsize=18, y=1.02)
 
 plt.tight_layout()
-plt.savefig("bin1_mutation/figures/todos_genotipos/Painel_Stripplots_ADNC.png", dpi=300, bbox_inches="tight")
+plt.savefig(f"{pasta_saida}/Painel_Stripplots_ADNC.png", dpi=300, bbox_inches="tight")
 plt.close()
     
 print("Análises de ADNC concluídas com sucesso!")
