@@ -14,7 +14,7 @@ adata = sc.read_h5ad("bin1_mutation/BIN1_Mutation.h5ad")
 
 # Resolução de Leiden atual
 
-res_teste = "0.3"
+res_teste = "0.45"
 
 pasta_saida = f"bin1_mutation/figures/resolucao_{res_teste}"
 
@@ -87,7 +87,7 @@ sce.pp.harmony_integrate(adata, key='donor_id')
 
 sc.pp.neighbors(adata, use_rep='X_pca_harmony') # Use reprentative
 
-resolucoes = [0.275, 0.3, 0.325, 0.35, 0.375, 0.4] 
+resolucoes = [0.45, 0.475, 0.5, 0.525, 0.55, 0.6] 
 for res in resolucoes:
     sc.tl.leiden(adata, resolution=res, key_added=f'leiden_{res}', flavor="igraph")
 
@@ -1046,4 +1046,4 @@ plt.close()
     
 print("Análises de ADNC concluídas com sucesso!")
 
-# adata_limpo.write_h5ad("bin1_mutation/adata_limpo_anotado.h5ad", compression='gzip')
+adata_limpo.write_h5ad("bin1_mutation/adata_limpo_anotado.h5ad", compression='gzip')
