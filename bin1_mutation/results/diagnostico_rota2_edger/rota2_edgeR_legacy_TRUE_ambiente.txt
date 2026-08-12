@@ -1,0 +1,8 @@
+R: R version 4.4.3 (2025-02-28)
+edgeR: 4.4.2
+edgeR Built: R 4.4.3; x86_64-conda-linux-gnu; 2026-08-12 01:38:34 UTC; unix
+edgeR libs: /home/mauriciogalvao/miniforge3/envs/milo_bin1/lib/R/library/edgeR/libs
+limma: 3.62.2
+OMP_NUM_THREADS=
+OPENBLAS_NUM_THREADS=
+MKL_NUM_THREADS=

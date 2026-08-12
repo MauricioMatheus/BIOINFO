@@ -1,0 +1,47 @@
+============================================================
+DIAGNÓSTICO edgeR PURO — ROTA 2
+============================================================
+robust = TRUE
+counts = /home/mauriciogalvao/Bioinfo/bin1_mutation/results/diagnostico_rota2_edger/rota2_counts_neighborhood_x_donor.tsv
+metadata = /home/mauriciogalvao/Bioinfo/bin1_mutation/results/diagnostico_rota2_edger/rota2_metadata_donor.tsv
+
+[CHECKPOINT OK] pacotes carregados | edgeR=4.4.2 | limma=3.62.2
+
+[CHECKPOINT OK] dados lidos | counts=2201x75 | metadata=75x4
+
+[CHECKPOINT OK] fatores definidos
+
+Design matrix:
+[1] 75 13
+rank = 13
+colunas:
+ [1] "Modelo_RecessivoNao_Recessivo" "Modelo_RecessivoRecessivo"    
+ [3] "Age_at_death78_89"             "Age_at_death90_plus"          
+ [5] "Braak_stageBraak_II"           "Braak_stageBraak_III"         
+ [7] "Braak_stageBraak_IV"           "Braak_stageBraak_V"           
+ [9] "Braak_stageBraak_VI"           "Thal_phaseThal_2"             
+[11] "Thal_phaseThal_3"              "Thal_phaseThal_4"             
+[13] "Thal_phaseThal_5"             
+
+[CHECKPOINT OK] model.matrix
+
+[CHECKPOINT OK] filtros | nhoods=2201 | samples=75
+
+[CHECKPOINT OK] DGEList
+
+[CHECKPOINT OK] calcNormFactors(TMM)
+
+[INICIANDO] estimateDisp
+
+[CHECKPOINT OK] estimateDisp
+
+[INICIANDO] glmQLFit(robust=TRUE)
+
+ *** caught bus error ***
+address (nil), cause 'unknown'
+
+Traceback:
+ 1: glmQLFit.default(y = y$counts, design = design, dispersion = dispersion,     offset = offset, lib.size = NULL, abundance.trend = abundance.trend,     AveLogCPM = y$AveLogCPM, robust = robust, winsor.tail.p = winsor.tail.p,     weights = y$weights, legacy = legacy, top.proportion = top.proportion,     keep.unit.mat = keep.unit.mat, ...)
+ 2: glmQLFit.DGEList(dge, design_use, robust = robust_flag)
+ 3: glmQLFit(dge, design_use, robust = robust_flag)
+An irrecoverable exception occurred. R is aborting now ...

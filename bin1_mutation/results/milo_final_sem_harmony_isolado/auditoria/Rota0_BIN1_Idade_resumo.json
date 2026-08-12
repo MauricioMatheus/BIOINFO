@@ -1,0 +1,21 @@
+{
+  "Rota_ID": 0,
+  "Rota": "ROTA 0: BIN1 + IDADE",
+  "Design": "~ Modelo_Recessivo + Age_at_death",
+  "Contraste": "Modelo_RecessivoRecessivo - Modelo_RecessivoNao_Recessivo",
+  "Solver": "edger",
+  "N_neighborhoods": 2201,
+  "SHA256_neighborhoods": "c06ce07f1ded7c9d96e932901a84e864f1487ec62ca952ee9152ec341aa08033",
+  "Min_PValue": 2.1820901871986235e-05,
+  "Min_FDR": 0.04346099122622948,
+  "Min_SpatialFDR": 0.04316773014275671,
+  "N_SpatialFDR_menor_0_1": 52,
+  "N_FDR_menor_0_1": 52,
+  "N_PValue_menor_0_05": 233,
+  "N_PValue_menor_0_01": 112,
+  "N_PValue_menor_0_001": 23,
+  "LogFC_min": -3.4718854811513453,
+  "LogFC_max": 5.325161382123007,
+  "N_logFC_positivo": 735,
+  "N_logFC_negativo": 1466
+}

@@ -1,0 +1,9 @@
+{
+  "run_id": "20260812_012951",
+  "rota_id": 2,
+  "rota": "ROTA 2: BIN1 + IDADE + BRAAK + THAL",
+  "n_neighborhoods": 2201,
+  "sha256_neighborhoods": "c06ce07f1ded7c9d96e932901a84e864f1487ec62ca952ee9152ec341aa08033",
+  "prop": 0.1,
+  "seed": 0
+}

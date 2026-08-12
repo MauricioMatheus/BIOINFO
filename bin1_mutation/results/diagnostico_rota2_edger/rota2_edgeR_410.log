@@ -1,0 +1,55 @@
+============================================================
+DIAGNÓSTICO edgeR PURO — ROTA 2
+============================================================
+robust = TRUE
+counts = /home/mauriciogalvao/Bioinfo/bin1_mutation/results/diagnostico_rota2_edger/rota2_counts_neighborhood_x_donor.tsv
+metadata = /home/mauriciogalvao/Bioinfo/bin1_mutation/results/diagnostico_rota2_edger/rota2_metadata_donor.tsv
+
+[CHECKPOINT OK] pacotes carregados | edgeR=4.10.3 | limma=3.68.5
+
+[CHECKPOINT OK] dados lidos | counts=2201x75 | metadata=75x4
+
+[CHECKPOINT OK] fatores definidos
+
+Design matrix:
+[1] 75 13
+rank = 13
+colunas:
+ [1] "Modelo_RecessivoNao_Recessivo" "Modelo_RecessivoRecessivo"    
+ [3] "Age_at_death78_89"             "Age_at_death90_plus"          
+ [5] "Braak_stageBraak_II"           "Braak_stageBraak_III"         
+ [7] "Braak_stageBraak_IV"           "Braak_stageBraak_V"           
+ [9] "Braak_stageBraak_VI"           "Thal_phaseThal_2"             
+[11] "Thal_phaseThal_3"              "Thal_phaseThal_4"             
+[13] "Thal_phaseThal_5"             
+
+[CHECKPOINT OK] model.matrix
+
+[CHECKPOINT OK] filtros | nhoods=2201 | samples=75
+
+[CHECKPOINT OK] DGEList
+calcNormFactors has been renamed to normLibSizes
+
+[CHECKPOINT OK] calcNormFactors(TMM)
+
+[INICIANDO] estimateDisp
+
+[CHECKPOINT OK] estimateDisp
+
+[INICIANDO] glmQLFit(robust=TRUE)
+
+[CHECKPOINT OK] glmQLFit(robust=TRUE)
+
+[CHECKPOINT OK] makeContrasts
+
+[INICIANDO] glmQLFTest
+
+[CHECKPOINT OK] glmQLFTest
+
+[CHECKPOINT OK] topTags
+
+[CHECKPOINT OK] resultado salvo em /home/mauriciogalvao/Bioinfo/bin1_mutation/results/diagnostico_rota2_edger/rota2_edgeR_resultado_Rscript.csv
+
+============================================================
+DIAGNÓSTICO ROTA 2 CONCLUÍDO SEM CRASH
+============================================================

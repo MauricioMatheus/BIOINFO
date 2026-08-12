@@ -1,0 +1,76 @@
+============================================================
+DIAGNÓSTICO edgeR — ROTA 2 — legacy=TRUE
+============================================================
+Counts: /home/mauriciogalvao/Bioinfo/bin1_mutation/results/diagnostico_rota2_edger/rota2_counts_neighborhood_x_donor.tsv
+Metadata: /home/mauriciogalvao/Bioinfo/bin1_mutation/results/diagnostico_rota2_edger/rota2_metadata_donor.tsv
+
+edgeR version: 4.4.2
+limma version: 3.62.2
+edgeR Built: R 4.4.3; x86_64-conda-linux-gnu; 2026-08-12 01:38:34 UTC; unix
+edgeR libs: /home/mauriciogalvao/miniforge3/envs/milo_bin1/lib/R/library/edgeR/libs
+R: R version 4.4.3 (2025-02-28)
+
+[CHECKPOINT OK] pacotes e ambiente registrados
+
+[CHECKPOINT OK] dados lidos | counts=2201x75 | metadata=75x4
+
+[CHECKPOINT OK] fatores definidos
+
+Design:
+[1] 75 13
+rank = 13
+ [1] "Modelo_RecessivoNao_Recessivo" "Modelo_RecessivoRecessivo"    
+ [3] "Age_at_death78_89"             "Age_at_death90_plus"          
+ [5] "Braak_stageBraak_II"           "Braak_stageBraak_III"         
+ [7] "Braak_stageBraak_IV"           "Braak_stageBraak_V"           
+ [9] "Braak_stageBraak_VI"           "Thal_phaseThal_2"             
+[11] "Thal_phaseThal_3"              "Thal_phaseThal_4"             
+[13] "Thal_phaseThal_5"             
+
+[CHECKPOINT OK] model.matrix
+
+[CHECKPOINT OK] DGEList
+
+[CHECKPOINT OK] calcNormFactors(TMM)
+
+[INICIANDO] estimateDisp
+
+[CHECKPOINT OK] estimateDisp
+
+Dispersões disponíveis:
+  common.dispersion: 8.503034
+  trended.dispersion length: 2201
+  tagwise.dispersion length: 2201
+
+[INICIANDO] glmQLFit(robust=TRUE, legacy=TRUE)
+
+[CHECKPOINT OK] glmQLFit(robust=TRUE, legacy=TRUE)
+
+Componentes principais do fit legacy:
+  coefficients: 2201 x 13
+  df.residual.zeros length: 2201
+  df.prior length: 2201
+  s2.post length: 2201
+
+[CHECKPOINT OK] makeContrasts
+
+[INICIANDO] glmQLFTest(legacy fit)
+
+[CHECKPOINT OK] glmQLFTest(legacy fit)
+
+[CHECKPOINT OK] topTags
+
+[CHECKPOINT OK] resultado salvo em /home/mauriciogalvao/Bioinfo/bin1_mutation/results/diagnostico_rota2_edger/rota2_edgeR_legacy_TRUE_resultado.csv
+
+Resumo PValue/FDR do caminho legacy:
+     logFC               F                PValue             FDR        
+ Min.   :-4.0129   Min.   :-56.1939   Min.   :0.00000   Min.   :0.0000  
+ 1st Qu.:-1.1990   1st Qu.:  0.3183   1st Qu.:0.04146   1st Qu.:0.1656  
+ Median :-0.4037   Median :  1.7217   Median :0.26775   Median :0.5353  
+ Mean   :-0.2335   Mean   :  3.6901   Mean   :0.37722   Mean   :0.5309  
+ 3rd Qu.: 0.5645   3rd Qu.:  5.1220   3rd Qu.:0.68341   3rd Qu.:0.9111  
+ Max.   : 4.7213   Max.   :116.2102   Max.   :1.00000   Max.   :1.0000  
+
+============================================================
+LEGACY=TRUE CONCLUIU SEM SIGBUS
+============================================================

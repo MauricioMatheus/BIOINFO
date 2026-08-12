@@ -1,0 +1,133 @@
+============================================================
+MILO FINAL — ETAPA 2 — edgeR 4.10.x
+============================================================
+R: R version 4.6.0 (2026-04-24)
+edgeR: 4.10.3
+limma: 3.68.5
+
+[CHECKPOINT OK] versão do edgeR validada
+
+[CHECKPOINT OK] counts 2201x75 e metadata alinhados
+
+[CHECKPOINT OK] fatores definidos
+
+============================================================
+ROTA 0: BIN1 + IDADE 
+============================================================
+Design: 75 x 4 | rank=4
+Colunas:
+[1] "Modelo_RecessivoNao_Recessivo" "Modelo_RecessivoRecessivo"    
+[3] "Age_at_death78_89"             "Age_at_death90_plus"          
+
+[CHECKPOINT OK] Rota0_BIN1_Idade model.matrix e filtros
+
+[CHECKPOINT OK] Rota0_BIN1_Idade DGEList
+
+[CHECKPOINT OK] Rota0_BIN1_Idade TMM / normLibSizes
+
+[INICIANDO] Rota0_BIN1_Idade estimateDisp
+
+[CHECKPOINT OK] Rota0_BIN1_Idade estimateDisp
+
+[INICIANDO] Rota0_BIN1_Idade glmQLFit robust=TRUE legacy=FALSE
+
+[CHECKPOINT OK] Rota0_BIN1_Idade glmQLFit
+
+[CHECKPOINT OK] Rota0_BIN1_Idade makeContrasts
+
+[INICIANDO] Rota0_BIN1_Idade glmQLFTest
+
+[CHECKPOINT OK] Rota0_BIN1_Idade glmQLFTest
+
+[CHECKPOINT OK] Rota0_BIN1_Idade resultado salvo
+
+============================================================
+ROTA 1: BIN1 + IDADE + ADNC 
+============================================================
+Design: 75 x 6 | rank=6
+Colunas:
+[1] "Modelo_RecessivoNao_Recessivo" "Modelo_RecessivoRecessivo"    
+[3] "Age_at_death78_89"             "Age_at_death90_plus"          
+[5] "ADNCIntermediate"              "ADNCHigh"                     
+
+[CHECKPOINT OK] Rota1_BIN1_Idade_ADNC model.matrix e filtros
+
+[CHECKPOINT OK] Rota1_BIN1_Idade_ADNC DGEList
+
+[CHECKPOINT OK] Rota1_BIN1_Idade_ADNC TMM / normLibSizes
+
+[INICIANDO] Rota1_BIN1_Idade_ADNC estimateDisp
+
+[CHECKPOINT OK] Rota1_BIN1_Idade_ADNC estimateDisp
+
+[INICIANDO] Rota1_BIN1_Idade_ADNC glmQLFit robust=TRUE legacy=FALSE
+
+[CHECKPOINT OK] Rota1_BIN1_Idade_ADNC glmQLFit
+
+[CHECKPOINT OK] Rota1_BIN1_Idade_ADNC makeContrasts
+
+[INICIANDO] Rota1_BIN1_Idade_ADNC glmQLFTest
+
+[CHECKPOINT OK] Rota1_BIN1_Idade_ADNC glmQLFTest
+
+[CHECKPOINT OK] Rota1_BIN1_Idade_ADNC resultado salvo
+
+============================================================
+ROTA 2: BIN1 + IDADE + BRAAK + THAL 
+============================================================
+Design: 75 x 13 | rank=13
+Colunas:
+ [1] "Modelo_RecessivoNao_Recessivo" "Modelo_RecessivoRecessivo"    
+ [3] "Age_at_death78_89"             "Age_at_death90_plus"          
+ [5] "Braak_stageBraak_II"           "Braak_stageBraak_III"         
+ [7] "Braak_stageBraak_IV"           "Braak_stageBraak_V"           
+ [9] "Braak_stageBraak_VI"           "Thal_phaseThal_2"             
+[11] "Thal_phaseThal_3"              "Thal_phaseThal_4"             
+[13] "Thal_phaseThal_5"             
+
+[CHECKPOINT OK] Rota2_BIN1_Idade_Braak_Thal model.matrix e filtros
+
+[CHECKPOINT OK] Rota2_BIN1_Idade_Braak_Thal DGEList
+
+[CHECKPOINT OK] Rota2_BIN1_Idade_Braak_Thal TMM / normLibSizes
+
+[INICIANDO] Rota2_BIN1_Idade_Braak_Thal estimateDisp
+
+[CHECKPOINT OK] Rota2_BIN1_Idade_Braak_Thal estimateDisp
+
+[INICIANDO] Rota2_BIN1_Idade_Braak_Thal glmQLFit robust=TRUE legacy=FALSE
+
+[CHECKPOINT OK] Rota2_BIN1_Idade_Braak_Thal glmQLFit
+
+[CHECKPOINT OK] Rota2_BIN1_Idade_Braak_Thal makeContrasts
+
+[INICIANDO] Rota2_BIN1_Idade_Braak_Thal glmQLFTest
+
+[CHECKPOINT OK] Rota2_BIN1_Idade_Braak_Thal glmQLFTest
+
+[CHECKPOINT OK] Rota2_BIN1_Idade_Braak_Thal resultado salvo
+
+                                                   Rota
+Rota0_BIN1_Idade                       Rota0_BIN1_Idade
+Rota1_BIN1_Idade_ADNC             Rota1_BIN1_Idade_ADNC
+Rota2_BIN1_Idade_Braak_Thal Rota2_BIN1_Idade_Braak_Thal
+                                                           Nome N_neighborhoods
+Rota0_BIN1_Idade                           ROTA 0: BIN1 + IDADE            2201
+Rota1_BIN1_Idade_ADNC               ROTA 1: BIN1 + IDADE + ADNC            2201
+Rota2_BIN1_Idade_Braak_Thal ROTA 2: BIN1 + IDADE + BRAAK + THAL            2201
+                              Min_PValue      Min_FDR LogFC_min LogFC_max
+Rota0_BIN1_Idade            2.268298e-07 4.992525e-04 -3.529497  5.223045
+Rota1_BIN1_Idade_ADNC       2.158420e-08 4.750682e-05 -3.841689  5.163510
+Rota2_BIN1_Idade_Braak_Thal 2.973369e-08 6.544385e-05 -4.207986  4.451462
+                            N_PValue_lt_0_05 N_FDR_lt_0_10  EdgeR  Limma Robust
+Rota0_BIN1_Idade                         391           182 4.10.3 3.68.5   TRUE
+Rota1_BIN1_Idade_ADNC                    380            97 4.10.3 3.68.5   TRUE
+Rota2_BIN1_Idade_Braak_Thal              215            53 4.10.3 3.68.5   TRUE
+                            Legacy
+Rota0_BIN1_Idade             FALSE
+Rota1_BIN1_Idade_ADNC        FALSE
+Rota2_BIN1_Idade_Braak_Thal  FALSE
+
+============================================================
+ETAPA 2 CONCLUÍDA — AS 3 ROTAS edgeR FORAM SALVAS
+============================================================

@@ -1,0 +1,68 @@
+
+==============================================================================
+ROTA 2: BIN1 + IDADE + BRAAK + THAL — WORKER ISOLADO
+==============================================================================
+Run ID: 20260812_012951
+Python: 3.10.20
+Pertpy: 0.10.0
+rpy2: 3.5.11
+Sistema: Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35
+
+Threads nativas:
+  OMP_NUM_THREADS=1
+  OPENBLAS_NUM_THREADS=1
+  MKL_NUM_THREADS=1
+  NUMEXPR_NUM_THREADS=1
+  VECLIB_MAXIMUM_THREADS=1
+  BLIS_NUM_THREADS=1
+
+[CHECK] Python -> rpy2 -> R -> edgeR/limma...
+2026-08-12 01:31:58 | [INFO] cffi mode is CFFI_MODE.ANY
+2026-08-12 01:31:58 | [INFO] R home found: /home/mauriciogalvao/miniforge3/envs/milo_bin1/lib/R
+2026-08-12 01:31:58 | [INFO] R library path: 
+2026-08-12 01:31:58 | [INFO] LD_LIBRARY_PATH: 
+2026-08-12 01:31:58 | [INFO] Default options to initialize R: rpy2, --quiet, --no-save
+2026-08-12 01:31:58 | [INFO] R is already initialized. No need to initialize.
+[OK] edgeR e limma carregados.
+Objeto: /home/mauriciogalvao/Bioinfo/bin1_mutation/adata_limpo_anotado_sem_harmony_res0.5_FINAL.h5ad
+Shape: (32657, 22015)
+Grafo: use_rep=X_pca, n_neighbors=15
+Pipeline: Sem_Harmony
+Leiden principal: 0.5
+[OK] Objeto pré-Milo validado.
+
+Coorte Milo:
+  células        = 32657
+  doadores       = 75
+  não recessivos = 64
+  recessivos     = 11
+
+Idade por doador:
+Age_at_death
+65_77       8
+78_89      26
+90_plus    41
+Name: count, dtype: int64
+
+Auditoria preventiva do design:
+  dimensões = (75, 13)
+  rank      = 13
+
+Inicializando pt.tl.Milo()...
+/home/mauriciogalvao/miniforge3/envs/milo_bin1/lib/python3.10/site-packages/mudata/_core/mudata.py:1471: FutureWarning: From 0.4 .update() will not pull obs/var columns from individual modalities by default anymore. Set mudata.set_options(pull_on_update=False) to adopt the new behaviour, which will become the default. Use new pull_obs/pull_var and push_obs/push_var methods for more flexibility.
+  self._update_attr("var", axis=0, join_common=join_common)
+/home/mauriciogalvao/miniforge3/envs/milo_bin1/lib/python3.10/site-packages/mudata/_core/mudata.py:1322: FutureWarning: From 0.4 .update() will not pull obs/var columns from individual modalities by default anymore. Set mudata.set_options(pull_on_update=False) to adopt the new behaviour, which will become the default. Use new pull_obs/pull_var and push_obs/push_var methods for more flexibility.
+  self._update_attr("obs", axis=1, join_common=join_common)
+Construindo neighborhoods no KNN já existente...
+Contando células por neighborhood e donor_id...
+Matriz Milo: (75, 2201)
+Importando anotação biológica para as neighborhoods...
+Neighborhoods: 2201
+SHA-256: c06ce07f1ded7c9d96e932901a84e864f1487ec62ca952ee9152ec341aa08033
+Neighborhoods mistas (<60%): 322
+
+==============================================================================
+TESTE edgeR — ROTA 2: BIN1 + IDADE + BRAAK + THAL
+==============================================================================
+Design: ~ Modelo_Recessivo + Age_at_death + Braak_stage + Thal_phase
+Contraste: Modelo_RecessivoRecessivo - Modelo_RecessivoNao_Recessivo

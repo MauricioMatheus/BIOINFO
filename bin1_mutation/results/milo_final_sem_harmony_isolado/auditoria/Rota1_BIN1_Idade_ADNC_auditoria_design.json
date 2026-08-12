@@ -1,0 +1,16 @@
+{
+  "rota_id": 1,
+  "design": "~ Modelo_Recessivo + Age_at_death + ADNC",
+  "n_doadores": 75,
+  "n_colunas_design_python": 6,
+  "rank_design_python": 6,
+  "full_rank_python": true,
+  "colunas_design_python": [
+    "Intercept",
+    "Modelo_Recessivo_Recessivo",
+    "Age_at_death_78_89",
+    "Age_at_death_90_plus",
+    "ADNC_Intermediate",
+    "ADNC_Low"
+  ]
+}

@@ -1,0 +1,52 @@
+============================================================
+DIAGNÓSTICO FINO edgeR — ROTA 2
+============================================================
+Modo: glmFit
+Counts: /home/mauriciogalvao/Bioinfo/bin1_mutation/results/diagnostico_rota2_edger/rota2_counts_neighborhood_x_donor.tsv
+Metadata: /home/mauriciogalvao/Bioinfo/bin1_mutation/results/diagnostico_rota2_edger/rota2_metadata_donor.tsv
+
+[CHECKPOINT OK] pacotes carregados | edgeR=4.4.2 | limma=3.62.2
+
+[CHECKPOINT OK] dados lidos | counts=2201x75
+
+[CHECKPOINT OK] fatores definidos
+
+Design:
+[1] 75 13
+rank = 13
+ [1] "Modelo_RecessivoNao_Recessivo" "Modelo_RecessivoRecessivo"    
+ [3] "Age_at_death78_89"             "Age_at_death90_plus"          
+ [5] "Braak_stageBraak_II"           "Braak_stageBraak_III"         
+ [7] "Braak_stageBraak_IV"           "Braak_stageBraak_V"           
+ [9] "Braak_stageBraak_VI"           "Thal_phaseThal_2"             
+[11] "Thal_phaseThal_3"              "Thal_phaseThal_4"             
+[13] "Thal_phaseThal_5"             
+
+[CHECKPOINT OK] model.matrix
+
+[CHECKPOINT OK] DGEList
+
+[CHECKPOINT OK] calcNormFactors
+
+[INICIANDO] estimateDisp
+
+[CHECKPOINT OK] estimateDisp
+
+Diagnóstico do designAsFactor:
+  nlevels(group) = 38
+  ncol(design)   = 13
+  Caminho esperado de glmFit: mglmLevenberg
+
+[INICIANDO] glmFit(dge, design_use)
+
+[CHECKPOINT OK] glmFit
+
+Método reportado por glmFit: levenberg
+Dimensão coefficients: 2201 x 13
+Deviance finita: TRUE
+
+[CHECKPOINT OK] glmFit terminou; o crash do glmQLFit ocorre DEPOIS de glmFit
+
+============================================================
+DIAGNÓSTICO FINO CONCLUÍDO SEM CRASH
+============================================================

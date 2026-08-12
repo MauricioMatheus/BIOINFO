@@ -1,0 +1,22 @@
+{
+  "Python": "3.10.20",
+  "Pertpy": "0.10.0",
+  "Scanpy": "1.11.5",
+  "AnnData": "0.11.4",
+  "MuData": "0.3.10",
+  "rpy2": "3.5.11",
+  "Sistema": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+  "Arquivo_entrada": "/home/mauriciogalvao/Bioinfo/bin1_mutation/adata_limpo_anotado_sem_harmony_res0.5_FINAL.h5ad",
+  "N_celulas": 32657,
+  "N_genes": 22015,
+  "N_doadores": 75,
+  "N_nhoods": 2201,
+  "Nhood_prop": 0.1,
+  "Nhood_seed": 0,
+  "SHA256_neighborhoods": "c06ce07f1ded7c9d96e932901a84e864f1487ec62ca952ee9152ec341aa08033",
+  "KNN_n_neighbors": 15,
+  "KNN_use_rep": "X_pca",
+  "Integracao": "Sem_Harmony",
+  "Leiden_principal": "0.5",
+  "EdgeR_executado_nesta_etapa": false
+}

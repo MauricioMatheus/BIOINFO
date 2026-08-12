@@ -11,3 +11,5 @@ h5ad/
 .venv_scrna/
 .vscode/
 /sea_ad.vcf
+*.sh
+Miniconda*.sh

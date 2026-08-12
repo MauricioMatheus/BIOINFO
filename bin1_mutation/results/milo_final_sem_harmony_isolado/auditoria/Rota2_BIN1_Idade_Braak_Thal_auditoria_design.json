@@ -1,0 +1,23 @@
+{
+  "rota_id": 2,
+  "design": "~ Modelo_Recessivo + Age_at_death + Braak_stage + Thal_phase",
+  "n_doadores": 75,
+  "n_colunas_design_python": 13,
+  "rank_design_python": 13,
+  "full_rank_python": true,
+  "colunas_design_python": [
+    "Intercept",
+    "Modelo_Recessivo_Recessivo",
+    "Age_at_death_78_89",
+    "Age_at_death_90_plus",
+    "Braak_stage_Braak_II",
+    "Braak_stage_Braak_III",
+    "Braak_stage_Braak_IV",
+    "Braak_stage_Braak_V",
+    "Braak_stage_Braak_VI",
+    "Thal_phase_Thal_2",
+    "Thal_phase_Thal_3",
+    "Thal_phase_Thal_4",
+    "Thal_phase_Thal_5"
+  ]
+}
