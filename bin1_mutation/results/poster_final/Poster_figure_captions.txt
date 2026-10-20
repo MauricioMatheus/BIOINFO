@@ -1,0 +1,13 @@
+POSTER FIGURE CAPTIONS — BIN1 / MICROGLIA / MILO
+
+METHODS — Cohort definition
+SEA-AD microglial dataset: 36,483 cells from 84 donors before clinical filtering. Donors classified as ADNC Low, Intermediate, or High were retained, while Not AD was excluded, yielding 32,657 cells from 75 donors (11 homozygous risk-allele carriers and 64 non-recessive individuals).
+
+RESULTS — Annotated microglial UMAP
+Final Leiden 0.50 UMAP of 32,657 cells from 75 donors, showing the 13 transcriptional states used for biological interpretation. Colors are identical to those used for the background states in the G2 overlay; the UMAP coordinates and cluster assignments are reused from the frozen final object and are not recalculated for this figure.
+
+RESULTS — G2 overlay
+G2 differential-abundance neighborhoods mapped onto the final annotated microglial UMAP. Background cells represent the 13 Leiden 0.50 states using the original frozen UMAP coordinates. Overlaid circles denote neighborhoods with SpatialFDR < 0.10 in G2 (genotype + age + sex + Braak); red indicates enrichment and blue indicates depletion in homozygous risk-allele carriers. Circle size reflects neighborhood size.
+
+RESULTS — Compact annotation dotplot
+Selected marker genes and transcriptional programs supporting the 13-state annotation. Dot size indicates the fraction of cells expressing each gene, while color represents mean log1p(CP10k) expression rescaled from 0 to 1 separately for each gene across clusters. The compact panel summarizes pre-existing annotation evidence; the final annotation also incorporated broader differential markers, microglial programs, SEA-AD reference labels, donor representation, and QC evidence.

@@ -2,7 +2,7 @@
 # 04_milo_finalize_final.py
 #
 # MILO FINAL — ETAPA 3
-# SpatialFDR + anotação + comparação das 3 rotas
+# SpatialFDR + anotação + comparação de 6 rotas
 #
 # EXECUTAR NO AMBIENTE:
 #   conda activate milo_bin1
@@ -60,7 +60,7 @@ ARQUIVO_ENTRADA = (
 PASTA_BASE = (
     SCRIPT_DIR
     / "results"
-    / "milo_final_edger410"
+    / "milo_final_edger410_reuniao"
 )
 
 PASTA_EXPORT = PASTA_BASE / "export"
@@ -71,7 +71,7 @@ PASTA_AUDITORIA = PASTA_BASE / "auditoria"
 PASTA_FIGURAS = (
     SCRIPT_DIR
     / "figures"
-    / "milo_final_edger410"
+    / "milo_final_edger410_reuniao"
 )
 
 PASTA_DONOR = (
@@ -121,16 +121,41 @@ COL_CONF = "Confianca_Anotacao"
 COL_QC = "Flag_QC_Anotacao"
 
 ROTAS = {
+    # Rotas principais solicitadas na reunião.
+    "RotaG0_BIN1": (
+        "ROTA G0: BIN1"
+    ),
+    "RotaG1_BIN1_Idade_Sexo": (
+        "ROTA G1: BIN1 + IDADE + SEXO"
+    ),
+    "RotaG2_BIN1_Idade_Sexo_Braak": (
+        "ROTA G2: BIN1 + IDADE + SEXO + BRAAK"
+    ),
+
+    # Rotas anteriores preservadas como análise de sensibilidade.
     "Rota0_BIN1_Idade": (
-        "ROTA 0: BIN1 + IDADE"
+        "ROTA S0: BIN1 + IDADE"
     ),
     "Rota1_BIN1_Idade_ADNC": (
-        "ROTA 1: BIN1 + IDADE + ADNC"
+        "ROTA S1: BIN1 + IDADE + ADNC"
     ),
     "Rota2_BIN1_Idade_Braak_Thal": (
-        "ROTA 2: BIN1 + IDADE + BRAAK + THAL"
+        "ROTA S2: BIN1 + IDADE + BRAAK + THAL"
     ),
 }
+
+ROTAS_PRINCIPAIS = [
+    "RotaG0_BIN1",
+    "RotaG1_BIN1_Idade_Sexo",
+    "RotaG2_BIN1_Idade_Sexo_Braak",
+]
+
+ROTAS_SENSIBILIDADE = [
+    "Rota0_BIN1_Idade",
+    "Rota1_BIN1_Idade_ADNC",
+    "Rota2_BIN1_Idade_Braak_Thal",
+]
+
 
 
 # ============================================================
@@ -183,6 +208,70 @@ def nivel_seguro_r(valor):
         valor,
     ).strip("_")
     return valor
+
+
+
+def detectar_coluna_sexo(obs):
+    candidatos = [
+        "Sex",
+        "sex",
+        "SEX",
+        "Gender",
+        "gender",
+        "GENDER",
+    ]
+
+    presentes = [
+        col
+        for col in candidatos
+        if col in obs.columns
+    ]
+
+    if presentes:
+        return presentes[0]
+
+    candidatos_textuais = [
+        col
+        for col in obs.columns
+        if (
+            "sex" in str(col).lower()
+            or "gender" in str(col).lower()
+        )
+    ]
+
+    raise KeyError(
+        "Nenhuma coluna de sexo/gênero foi encontrada. "
+        f"Colunas candidatas por texto: {candidatos_textuais}"
+    )
+
+
+def normalizar_sexo(valor):
+    if pd.isna(valor):
+        return np.nan
+
+    s = str(valor).strip().lower()
+
+    if s in {
+        "f",
+        "female",
+        "feminino",
+        "woman",
+        "mulher",
+        "xx",
+    }:
+        return "Female"
+
+    if s in {
+        "m",
+        "male",
+        "masculino",
+        "man",
+        "homem",
+        "xy",
+    }:
+        return "Male"
+
+    return np.nan
 
 
 def assinatura_neighborhoods(
@@ -412,6 +501,31 @@ def preparar_metadados(
             inplace=True,
         )
 
+    coluna_sexo_original = detectar_coluna_sexo(
+        adata.obs
+    )
+
+    adata.obs["Sex"] = (
+        adata.obs[coluna_sexo_original]
+        .map(normalizar_sexo)
+    )
+
+    if adata.obs["Sex"].isna().any():
+        valores_problematicos = sorted(
+            adata.obs.loc[
+                adata.obs["Sex"].isna(),
+                coluna_sexo_original,
+            ]
+            .astype(str)
+            .unique()
+            .tolist()
+        )
+
+        raise RuntimeError(
+            "Não foi possível padronizar todos os valores de sexo. "
+            f"Valores problemáticos: {valores_problematicos}"
+        )
+
     mapa_bin1 = {
         "0/0": "Nao_Recessivo",
         "0/1": "Nao_Recessivo",
@@ -467,6 +581,20 @@ def preparar_metadados(
         ],
         ordered=True,
     )
+
+    adata.obs["Sex"] = pd.Categorical(
+        adata.obs["Sex"].astype(str),
+        categories=[
+            "Female",
+            "Male",
+        ],
+        ordered=True,
+    )
+
+    if adata.obs["Sex"].isna().any():
+        raise RuntimeError(
+            "A variável Sex ficou com NA após a padronização."
+        )
 
     adata.obs["ADNC"] = pd.Categorical(
         adata.obs["ADNC"].astype(str),
@@ -640,6 +768,17 @@ def gerar_donor_level(
     prefixo,
     titulo,
 ):
+    """
+    Gera:
+      1) tabela donor-level para Top20;
+      2) figura Top6 em escala completa;
+      3) figura Top6 com zoom robusto no eixo Y.
+
+    O zoom é APENAS visual. Nenhum doador é removido da análise ou da
+    tabela. Pontos acima do limite do zoom são indicados por triângulos
+    no topo do painel, e a figura de escala completa é sempre preservada.
+    """
+
     top = (
         resultados
         .sort_values(
@@ -664,16 +803,6 @@ def gerar_donor_level(
     if not ids:
         return
 
-    total_cells = (
-        counts_donor_x_nhood
-        .max(
-            axis=1
-        )
-    )
-
-    # Para a visualização percentual, o denominador correto é o total
-    # de células do donor no objeto, calculado separadamente no chamador.
-    # Esta função recebe essa coluna já presente em donor_meta.
     donor_long = (
         counts_donor_x_nhood[
             ids
@@ -756,157 +885,287 @@ def gerar_donor_level(
 
     ids_plot = ids[:6]
 
-    n_cols = 3
-    n_rows = int(
-        np.ceil(
-            len(ids_plot)
-            / n_cols
-        )
-    )
-
-    fig, axes = plt.subplots(
-        n_rows,
-        n_cols,
-        figsize=(
-            17,
-            5.5 * n_rows,
-        ),
-    )
-
-    axes = np.atleast_1d(
-        axes
-    ).ravel()
-
-    rng = np.random.default_rng(
-        42
-    )
-
-    for ax, nhood in zip(
-        axes,
-        ids_plot,
+    def desenhar_figura(
+        zoom=False,
     ):
-        d = donor_long[
-            donor_long["Neighborhood"]
-            == nhood
-        ]
-
-        nao = (
-            d.loc[
-                d["Modelo_Recessivo"]
-                == "Nao_Recessivo",
-                "Percent_cells_donor",
-            ]
-            .to_numpy(
-                dtype=float
+        n_cols = 3
+        n_rows = int(
+            np.ceil(
+                len(ids_plot)
+                / n_cols
             )
         )
 
-        rec = (
-            d.loc[
-                d["Modelo_Recessivo"]
-                == "Recessivo",
-                "Percent_cells_donor",
-            ]
-            .to_numpy(
-                dtype=float
-            )
-        )
-
-        ax.boxplot(
-            [
-                nao,
-                rec,
-            ],
-            positions=[
-                0,
-                1,
-            ],
-            widths=0.55,
-            showfliers=False,
-        )
-
-        for pos, valores in enumerate(
-            [
-                nao,
-                rec,
-            ]
-        ):
-            jitter = rng.normal(
-                loc=pos,
-                scale=0.04,
-                size=len(valores),
-            )
-
-            ax.scatter(
-                jitter,
-                valores,
-                s=26,
-                alpha=0.7,
-            )
-
-        linha = (
-            top[
-                top["Neighborhood"]
-                .astype(str)
-                == nhood
-            ]
-            .iloc[0]
-        )
-
-        ax.set_title(
-            (
-                f"Nhood {nhood}\n"
-                f"logFC={linha['logFC']:.2f} | "
-                f"P={linha['PValue']:.2e} | "
-                f"SFDR={linha['SpatialFDR']:.2e}"
+        fig, axes = plt.subplots(
+            n_rows,
+            n_cols,
+            figsize=(
+                17,
+                5.7 * n_rows,
             ),
-            fontsize=9,
         )
 
-        ax.set_xticks(
-            [
-                0,
-                1,
-            ]
+        axes = np.atleast_1d(
+            axes
+        ).ravel()
+
+        rng = np.random.default_rng(
+            42
         )
 
-        ax.set_xticklabels(
-            [
-                "Não recessivo",
-                "Recessivo",
-            ],
-            rotation=12,
+        for ax, nhood in zip(
+            axes,
+            ids_plot,
+        ):
+            d = donor_long[
+                donor_long["Neighborhood"]
+                == nhood
+            ].copy()
+
+            nao = (
+                d.loc[
+                    d["Modelo_Recessivo"]
+                    == "Nao_Recessivo",
+                    "Percent_cells_donor",
+                ]
+                .to_numpy(
+                    dtype=float
+                )
+            )
+
+            rec = (
+                d.loc[
+                    d["Modelo_Recessivo"]
+                    == "Recessivo",
+                    "Percent_cells_donor",
+                ]
+                .to_numpy(
+                    dtype=float
+                )
+            )
+
+            ax.boxplot(
+                [
+                    nao,
+                    rec,
+                ],
+                positions=[
+                    0,
+                    1,
+                ],
+                widths=0.55,
+                showfliers=False,
+            )
+
+            todos_valores = np.concatenate(
+                [
+                    nao,
+                    rec,
+                ]
+            )
+
+            limite_zoom = None
+
+            if zoom and len(todos_valores) > 0:
+                positivos = todos_valores[
+                    np.isfinite(
+                        todos_valores
+                    )
+                ]
+
+                if len(positivos) > 0:
+                    q975 = float(
+                        np.quantile(
+                            positivos,
+                            0.975,
+                        )
+                    )
+
+                    q75 = float(
+                        np.quantile(
+                            positivos,
+                            0.75,
+                        )
+                    )
+
+                    limite_zoom = max(
+                        q975 * 1.12,
+                        q75 * 1.50,
+                        0.05,
+                    )
+
+                    max_real = float(
+                        np.max(
+                            positivos
+                        )
+                    )
+
+                    if limite_zoom >= max_real:
+                        limite_zoom = None
+
+            for pos, valores in enumerate(
+                [
+                    nao,
+                    rec,
+                ]
+            ):
+                jitter = rng.normal(
+                    loc=pos,
+                    scale=0.04,
+                    size=len(valores),
+                )
+
+                if (
+                    zoom
+                    and limite_zoom is not None
+                ):
+                    dentro = (
+                        valores
+                        <= limite_zoom
+                    )
+
+                    ax.scatter(
+                        jitter[dentro],
+                        valores[dentro],
+                        s=26,
+                        alpha=0.7,
+                    )
+
+                    acima = ~dentro
+
+                    if np.any(acima):
+                        ax.scatter(
+                            jitter[acima],
+                            np.full(
+                                int(np.sum(acima)),
+                                limite_zoom * 0.985,
+                            ),
+                            s=45,
+                            alpha=0.9,
+                            marker="^",
+                            clip_on=True,
+                        )
+
+                        ax.text(
+                            pos,
+                            limite_zoom * 0.94,
+                            (
+                                f"{int(np.sum(acima))} "
+                                "acima do zoom"
+                            ),
+                            ha="center",
+                            va="top",
+                            fontsize=7,
+                        )
+
+                else:
+                    ax.scatter(
+                        jitter,
+                        valores,
+                        s=26,
+                        alpha=0.7,
+                    )
+
+            linha = (
+                top[
+                    top["Neighborhood"]
+                    .astype(str)
+                    == nhood
+                ]
+                .iloc[0]
+            )
+
+            ax.set_title(
+                (
+                    f"Nhood {nhood}\n"
+                    f"logFC={linha['logFC']:.2f} | "
+                    f"P={linha['PValue']:.2e} | "
+                    f"SFDR={linha['SpatialFDR']:.2e}"
+                ),
+                fontsize=9,
+            )
+
+            ax.set_xticks(
+                [
+                    0,
+                    1,
+                ]
+            )
+
+            ax.set_xticklabels(
+                [
+                    "Não recessivo",
+                    "Recessivo",
+                ],
+                rotation=12,
+            )
+
+            ax.set_ylabel(
+                "% das células do donor"
+            )
+
+            if (
+                zoom
+                and limite_zoom is not None
+            ):
+                ax.set_ylim(
+                    0,
+                    limite_zoom,
+                )
+
+        for ax in axes[
+            len(ids_plot):
+        ]:
+            fig.delaxes(
+                ax
+            )
+
+        if zoom:
+            subtitulo = (
+                "Zoom do eixo Y para visualização; "
+                "triângulos = valores acima do limite. "
+                "Nenhum ponto foi removido da análise."
+            )
+        else:
+            subtitulo = (
+                "Escala completa; visualização descritiva"
+            )
+
+        fig.suptitle(
+            (
+                f"Donor-level — {titulo}\n"
+                f"{subtitulo}"
+            ),
+            fontsize=14,
         )
 
-        ax.set_ylabel(
-            "% das células do donor"
+        plt.tight_layout()
+
+        sufixo = (
+            "ZOOM"
+            if zoom
+            else "ESCALA_COMPLETA"
         )
 
-    for ax in axes[
-        len(ids_plot):
-    ]:
-        fig.delaxes(
-            ax
+        plt.savefig(
+            PASTA_FIGURAS_DONOR
+            / (
+                f"{prefixo}_Top6_donor_level_"
+                f"{sufixo}.png"
+            ),
+            dpi=300,
+            bbox_inches="tight",
         )
 
-    fig.suptitle(
-        (
-            f"Donor-level — {titulo}\n"
-            "Visualização descritiva"
-        ),
-        fontsize=15,
+        plt.close()
+
+    desenhar_figura(
+        zoom=False
     )
 
-    plt.tight_layout()
-
-    plt.savefig(
-        PASTA_FIGURAS_DONOR
-        / f"{prefixo}_Top6_donor_level.png",
-        dpi=300,
-        bbox_inches="tight",
+    desenhar_figura(
+        zoom=True
     )
-
-    plt.close()
 
 
 # ============================================================
@@ -1155,6 +1414,7 @@ doadores = (
             "donor_id",
             "Modelo_Recessivo",
             "Age_at_death",
+            "Sex",
             "ADNC",
             "Braak_stage",
             "Thal_phase",
@@ -1489,6 +1749,11 @@ for prefixo, titulo in ROTAS.items():
 
     resumo = {
         "Rota": prefixo,
+        "Grupo": (
+            "Principal_reuniao"
+            if prefixo in ROTAS_PRINCIPAIS
+            else "Sensibilidade_anterior"
+        ),
         "Nome": titulo,
         "N_neighborhoods": len(final),
         "Min_PValue": float(
@@ -1604,183 +1869,178 @@ for prefixo, titulo in ROTAS.items():
     )
 
 
-# ============================================================
-# 5. COMPARAÇÃO DAS ROTAS
-# ============================================================
 
-resumo_df = pd.DataFrame(
-    resumos
-)
+def salvar_top20_recorrentes(
+    resultados,
+    rotas_selecionadas,
+    prefixo_arquivo,
+):
+    partes = []
 
-resumo_df.to_csv(
-    PASTA_FINAL
-    / "Resumo_comparativo_das_rotas.csv",
-    index=False,
-)
+    for rota in rotas_selecionadas:
+        df = resultados[rota]
 
-print(
-    "\nResumo comparativo:"
-)
-
-print(
-    resumo_df.to_string(
-        index=False
-    )
-)
-
-
-# ============================================================
-# 6. TOP20 RECORRENTES
-# ============================================================
-
-top_partes = []
-
-for prefixo, df in resultados_rotas.items():
-    top = (
-        df
-        .sort_values(
-            "PValue"
+        top = (
+            df
+            .sort_values(
+                "PValue"
+            )
+            .head(20)
+            .copy()
+            .reset_index(
+                drop=True
+            )
         )
-        .head(20)
-        .copy()
-        .reset_index(
-            drop=True
+
+        top["Rota"] = rota
+        top["Rank_PValue"] = np.arange(
+            1,
+            len(top) + 1,
         )
-    )
 
-    top["Rota"] = prefixo
+        partes.append(
+            top
+        )
 
-    top["Rank_PValue"] = np.arange(
-        1,
-        len(top) + 1,
-    )
-
-    top_partes.append(
-        top
-    )
-
-top20 = pd.concat(
-    top_partes,
-    ignore_index=True,
-)
-
-rec_top = (
-    top20
-    .groupby(
-        "Neighborhood"
-    )
-    .agg(
-        Ocorrencias_Top20=(
-            "Rota",
-            "nunique",
-        ),
-        Rotas=(
-            "Rota",
-            lambda x: "; ".join(
-                sorted(
-                    set(x)
-                )
-            ),
-        ),
-        Melhor_rank=(
-            "Rank_PValue",
-            "min",
-        ),
-        Menor_PValue=(
-            "PValue",
-            "min",
-        ),
-        Menor_SpatialFDR=(
-            "SpatialFDR",
-            "min",
-        ),
-        Maior_abs_logFC=(
-            "logFC",
-            lambda x: float(
-                np.max(
-                    np.abs(
-                        np.asarray(
-                            x,
-                            dtype=float,
-                        )
-                    )
-                )
-            ),
-        ),
-        Leiden_0_5=(
-            "nhood_Leiden_0_5",
-            "first",
-        ),
-        Estado_biologico=(
-            "nhood_annotation",
-            "first",
-        ),
-        Flag_QC=(
-            "nhood_QC_cluster",
-            "first",
-        ),
-    )
-    .sort_values(
-        [
-            "Ocorrencias_Top20",
-            "Menor_PValue",
-        ],
-        ascending=[
-            False,
-            True,
-        ],
-    )
-)
-
-rec_top.to_csv(
-    PASTA_FINAL
-    / "Candidatos_recorrentes_Top20_resumo.csv"
-)
-
-top20.to_csv(
-    PASTA_FINAL
-    / "Candidatos_recorrentes_Top20_detalhado.csv",
-    index=False,
-)
-
-
-# ============================================================
-# 7. SIGNIFICATIVAS RECORRENTES
-# ============================================================
-
-sig_partes = []
-
-for prefixo, df in resultados_rotas.items():
-    sig = (
-        df[
-            df["SpatialFDR"]
-            < SPATIAL_FDR_LIMIAR
-        ]
-        .copy()
-    )
-
-    if sig.empty:
-        continue
-
-    sig["Rota"] = prefixo
-    sig_partes.append(
-        sig
-    )
-
-if sig_partes:
-    sig_all = pd.concat(
-        sig_partes,
+    top20_local = pd.concat(
+        partes,
         ignore_index=True,
     )
 
-    sig_all.to_csv(
+    rec = (
+        top20_local
+        .groupby(
+            "Neighborhood"
+        )
+        .agg(
+            Ocorrencias_Top20=(
+                "Rota",
+                "nunique",
+            ),
+            Rotas=(
+                "Rota",
+                lambda x: "; ".join(
+                    sorted(
+                        set(x)
+                    )
+                ),
+            ),
+            Melhor_rank=(
+                "Rank_PValue",
+                "min",
+            ),
+            Menor_PValue=(
+                "PValue",
+                "min",
+            ),
+            Menor_SpatialFDR=(
+                "SpatialFDR",
+                "min",
+            ),
+            Maior_abs_logFC=(
+                "logFC",
+                lambda x: float(
+                    np.max(
+                        np.abs(
+                            np.asarray(
+                                x,
+                                dtype=float,
+                            )
+                        )
+                    )
+                ),
+            ),
+            Leiden_0_5=(
+                "nhood_Leiden_0_5",
+                "first",
+            ),
+            Estado_biologico=(
+                "nhood_annotation",
+                "first",
+            ),
+            Flag_QC=(
+                "nhood_QC_cluster",
+                "first",
+            ),
+        )
+        .sort_values(
+            [
+                "Ocorrencias_Top20",
+                "Menor_PValue",
+            ],
+            ascending=[
+                False,
+                True,
+            ],
+        )
+    )
+
+    rec.to_csv(
         PASTA_FINAL
-        / "Neighborhoods_significativas_todas_rotas_detalhado.csv",
+        / f"{prefixo_arquivo}_resumo.csv"
+    )
+
+    top20_local.to_csv(
+        PASTA_FINAL
+        / f"{prefixo_arquivo}_detalhado.csv",
         index=False,
     )
 
-    sig_rec = (
-        sig_all
+
+def salvar_significativas_recorrentes(
+    resultados,
+    rotas_selecionadas,
+    prefixo_arquivo,
+):
+    partes = []
+
+    for rota in rotas_selecionadas:
+        df = resultados[rota]
+
+        sig = (
+            df[
+                df["SpatialFDR"]
+                < SPATIAL_FDR_LIMIAR
+            ]
+            .copy()
+        )
+
+        if sig.empty:
+            continue
+
+        sig["Rota"] = rota
+        partes.append(
+            sig
+        )
+
+    if not partes:
+        pd.DataFrame().to_csv(
+            PASTA_FINAL
+            / f"{prefixo_arquivo}_resumo.csv",
+            index=False,
+        )
+
+        pd.DataFrame().to_csv(
+            PASTA_FINAL
+            / f"{prefixo_arquivo}_detalhado.csv",
+            index=False,
+        )
+
+        return
+
+    sig_all_local = pd.concat(
+        partes,
+        ignore_index=True,
+    )
+
+    sig_all_local.to_csv(
+        PASTA_FINAL
+        / f"{prefixo_arquivo}_detalhado.csv",
+        index=False,
+    )
+
+    rec = (
+        sig_all_local
         .groupby(
             "Neighborhood"
         )
@@ -1843,17 +2103,69 @@ if sig_partes:
         )
     )
 
-    sig_rec.to_csv(
+    rec.to_csv(
         PASTA_FINAL
-        / "Neighborhoods_significativas_recorrentes_resumo.csv"
+        / f"{prefixo_arquivo}_resumo.csv"
     )
 
-else:
-    pd.DataFrame().to_csv(
-        PASTA_FINAL
-        / "Neighborhoods_significativas_recorrentes_resumo.csv",
-        index=False,
+
+# ============================================================
+# 5. COMPARAÇÃO DAS ROTAS
+# ============================================================
+
+resumo_df = pd.DataFrame(
+    resumos
+)
+
+resumo_df.to_csv(
+    PASTA_FINAL
+    / "Resumo_comparativo_das_rotas.csv",
+    index=False,
+)
+
+print(
+    "\nResumo comparativo:"
+)
+
+print(
+    resumo_df.to_string(
+        index=False
     )
+)
+
+
+# ============================================================
+# 6. RECORRÊNCIA — ROTAS PRINCIPAIS DA REUNIÃO
+# ============================================================
+
+salvar_top20_recorrentes(
+    resultados_rotas,
+    ROTAS_PRINCIPAIS,
+    "Candidatos_recorrentes_Top20_rotas_principais",
+)
+
+salvar_significativas_recorrentes(
+    resultados_rotas,
+    ROTAS_PRINCIPAIS,
+    "Neighborhoods_significativas_recorrentes_rotas_principais",
+)
+
+
+# ============================================================
+# 7. RECORRÊNCIA — TODAS AS 6 ROTAS
+# ============================================================
+
+salvar_top20_recorrentes(
+    resultados_rotas,
+    list(ROTAS.keys()),
+    "Candidatos_recorrentes_Top20_todas_6_rotas",
+)
+
+salvar_significativas_recorrentes(
+    resultados_rotas,
+    list(ROTAS.keys()),
+    "Neighborhoods_significativas_recorrentes_todas_6_rotas",
+)
 
 
 # ============================================================
@@ -1862,7 +2174,7 @@ else:
 
 status = {
     "Concluido": True,
-    "N_rotas": 3,
+    "N_rotas": 6,
     "N_neighborhoods": N_NHOODS_ESPERADO,
     "SHA256_neighborhoods": assinatura,
     "SpatialFDR_limiar": SPATIAL_FDR_LIMIAR,
@@ -1877,6 +2189,8 @@ status = {
     ),
     "Robust": True,
     "Legacy": False,
+    "Rotas_principais_reuniao": ROTAS_PRINCIPAIS,
+    "Rotas_sensibilidade": ROTAS_SENSIBILIDADE,
     "Harmony": False,
     "PCA_recalculada": False,
     "KNN_recalculado": False,

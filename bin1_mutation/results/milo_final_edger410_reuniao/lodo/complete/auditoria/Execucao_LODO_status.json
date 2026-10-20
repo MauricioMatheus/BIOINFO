@@ -1,0 +1,13 @@
+{
+  "Concluido": true,
+  "Modo": "complete",
+  "N_cenarios_edgeR_OK": 75,
+  "N_ajustes_edgeR_OK": 225,
+  "N_rotas": 3,
+  "N_neighborhoods": 2201,
+  "SHA256_neighborhoods": "c06ce07f1ded7c9d96e932901a84e864f1487ec62ca952ee9152ec341aa08033",
+  "SpatialFDR_limiar": 0.1,
+  "SpatialFDR_implementacao": "Reprodução de Pertpy 0.10.0 Milo._graph_spatial_fdr",
+  "Recorrentes_G0_G1_G2_baseline": 28,
+  "Nucleo_6_rotas_baseline": 13
+}

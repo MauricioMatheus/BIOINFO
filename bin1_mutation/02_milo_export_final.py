@@ -60,7 +60,7 @@ ARQUIVO_ENTRADA = (
 PASTA_BASE = (
     SCRIPT_DIR
     / "results"
-    / "milo_final_edger410"
+    / "milo_final_edger410_reuniao"
 )
 
 PASTA_EXPORT = PASTA_BASE / "export"
@@ -154,6 +154,78 @@ def nivel_seguro_r(valor):
         valor,
     ).strip("_")
     return valor
+
+
+
+def detectar_coluna_sexo(obs):
+    """
+    Detecta uma coluna de sexo/gênero biológico nos metadados.
+    A análise Milo usará uma variável padronizada chamada 'Sex'.
+    """
+    candidatos = [
+        "Sex",
+        "sex",
+        "SEX",
+        "Gender",
+        "gender",
+        "GENDER",
+    ]
+
+    presentes = [
+        col
+        for col in candidatos
+        if col in obs.columns
+    ]
+
+    if not presentes:
+        candidatos_textuais = [
+            col
+            for col in obs.columns
+            if (
+                "sex" in str(col).lower()
+                or "gender" in str(col).lower()
+            )
+        ]
+
+        raise KeyError(
+            "Nenhuma coluna de sexo/gênero foi encontrada. "
+            f"Colunas candidatas por texto: {candidatos_textuais}"
+        )
+
+    return presentes[0]
+
+
+def normalizar_sexo(valor):
+    if pd.isna(valor):
+        return np.nan
+
+    s = str(valor).strip().lower()
+
+    feminino = {
+        "f",
+        "female",
+        "feminino",
+        "woman",
+        "mulher",
+        "xx",
+    }
+
+    masculino = {
+        "m",
+        "male",
+        "masculino",
+        "man",
+        "homem",
+        "xy",
+    }
+
+    if s in feminino:
+        return "Female"
+
+    if s in masculino:
+        return "Male"
+
+    return np.nan
 
 
 def assinatura_neighborhoods(
@@ -446,10 +518,40 @@ if renomear:
         inplace=True,
     )
 
+coluna_sexo_original = detectar_coluna_sexo(
+    adata.obs
+)
+
+print(
+    f"Coluna de sexo detectada: {coluna_sexo_original!r}"
+)
+
+adata.obs["Sex"] = (
+    adata.obs[coluna_sexo_original]
+    .map(normalizar_sexo)
+)
+
+if adata.obs["Sex"].isna().any():
+    valores_problematicos = sorted(
+        adata.obs.loc[
+            adata.obs["Sex"].isna(),
+            coluna_sexo_original,
+        ]
+        .astype(str)
+        .unique()
+        .tolist()
+    )
+
+    raise RuntimeError(
+        "Não foi possível padronizar todos os valores de sexo. "
+        f"Valores problemáticos: {valores_problematicos}"
+    )
+
 obrigatorias = [
     "donor_id",
     "Mutacao_BIN1",
     "Age_at_death",
+    "Sex",
     "ADNC",
     "Braak_stage",
     "Thal_phase",
@@ -507,6 +609,7 @@ colunas_modelo = [
     "donor_id",
     "Modelo_Recessivo",
     "Age_at_death",
+    "Sex",
     "ADNC",
     "Braak_stage",
     "Thal_phase",
@@ -546,6 +649,31 @@ adata.obs["Age_at_death"] = pd.Categorical(
         "65_77",
         "78_89",
         "90_plus",
+    ],
+    ordered=True,
+)
+
+sex_presentes = set(
+    adata.obs["Sex"]
+    .astype(str)
+    .unique()
+)
+
+if not sex_presentes.issubset({"Female", "Male"}):
+    raise RuntimeError(
+        f"Categorias de sexo inesperadas: {sorted(sex_presentes)}"
+    )
+
+if len(sex_presentes) < 2:
+    raise RuntimeError(
+        "A covariável Sex possui apenas uma categoria na coorte."
+    )
+
+adata.obs["Sex"] = pd.Categorical(
+    adata.obs["Sex"].astype(str),
+    categories=[
+        "Female",
+        "Male",
     ],
     ordered=True,
 )
@@ -609,6 +737,7 @@ for col in [
 cov_donor = [
     "Modelo_Recessivo",
     "Age_at_death",
+    "Sex",
     "ADNC",
     "Braak_stage",
     "Thal_phase",
@@ -689,6 +818,26 @@ if (
 print(
     f"[OK] 75 doadores: "
     f"{n_nao} não recessivos / {n_rec} recessivos."
+)
+
+print("\nDistribuição donor-level de sexo:")
+print(
+    doadores["Sex"]
+    .astype(str)
+    .value_counts()
+)
+
+tabela_bin1_sexo = pd.crosstab(
+    doadores["Modelo_Recessivo"].astype(str),
+    doadores["Sex"].astype(str),
+)
+
+print("\nModelo recessivo x sexo:")
+print(tabela_bin1_sexo)
+
+tabela_bin1_sexo.to_csv(
+    PASTA_AUDITORIA
+    / "Crosstab_Modelo_Recessivo_x_Sex.csv"
 )
 
 
@@ -1154,6 +1303,8 @@ ambiente = {
     "KNN_use_rep": use_rep,
     "Integracao": integracao,
     "Leiden_principal": resolucao,
+    "Coluna_sexo_original": coluna_sexo_original,
+    "Categorias_Sex": sorted(sex_presentes),
     "EdgeR_executado_nesta_etapa": False,
 }
 

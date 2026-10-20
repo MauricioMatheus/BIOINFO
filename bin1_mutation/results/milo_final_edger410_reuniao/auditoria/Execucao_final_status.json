@@ -1,0 +1,28 @@
+{
+  "Concluido": true,
+  "N_rotas": 6,
+  "N_neighborhoods": 2201,
+  "SHA256_neighborhoods": "c06ce07f1ded7c9d96e932901a84e864f1487ec62ca952ee9152ec341aa08033",
+  "SpatialFDR_limiar": 0.1,
+  "SpatialFDR_implementacao": "Reprodução de Pertpy 0.10.0 Milo._graph_spatial_fdr",
+  "EdgeR": [
+    "4.10.3"
+  ],
+  "Robust": true,
+  "Legacy": false,
+  "Rotas_principais_reuniao": [
+    "RotaG0_BIN1",
+    "RotaG1_BIN1_Idade_Sexo",
+    "RotaG2_BIN1_Idade_Sexo_Braak"
+  ],
+  "Rotas_sensibilidade": [
+    "Rota0_BIN1_Idade",
+    "Rota1_BIN1_Idade_ADNC",
+    "Rota2_BIN1_Idade_Braak_Thal"
+  ],
+  "Harmony": false,
+  "PCA_recalculada": false,
+  "KNN_recalculado": false,
+  "UMAP_recalculado": false,
+  "Anotacao_biologica_refeita": false
+}

@@ -1,0 +1,21 @@
+{
+  "Concluido": true,
+  "SHA256_neighborhoods": "c06ce07f1ded7c9d96e932901a84e864f1487ec62ca952ee9152ec341aa08033",
+  "N_neighborhoods_total": 2201,
+  "Membership_shape": [
+    32657,
+    2201
+  ],
+  "Overlap_metric": "intersection / min(size_A, size_B)",
+  "Threshold_primario": 0.5,
+  "Thresholds_sensibilidade": [
+    0.3,
+    0.5,
+    0.7
+  ],
+  "N_recorrentes_G0_G1_G2": 28,
+  "N_nucleo_6_rotas": 13,
+  "N_deplecoes_homeostaticas_G2": 6,
+  "Inferencia_nova": false,
+  "Observacao": "Agrupamento descritivo. edgeR/SpatialFDR permanecem como inferência; regiões não recebem novos p-valores."
+}

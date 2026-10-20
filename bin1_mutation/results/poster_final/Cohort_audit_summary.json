@@ -1,0 +1,13 @@
+{
+  "dataset_label": "SEA-AD microglial dataset",
+  "raw_cells": 36483,
+  "raw_donors": 84,
+  "reference_raw_donors_84_confirmed": true,
+  "filter": "ADNC in {Low, Intermediate, High}; Not AD excluded",
+  "post_filter_cells": 32657,
+  "post_filter_donors": 75,
+  "final_object_cells": 32657,
+  "final_object_donors": 75,
+  "excluded_cells": 3826,
+  "excluded_donors": 9
+}

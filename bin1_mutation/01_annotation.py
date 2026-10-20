@@ -25,6 +25,8 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import matplotlib.pyplot as plt
+import seaborn as sns
+import statsmodels.api as sm
 
 
 # ============================================================
@@ -53,6 +55,12 @@ PASTA_FIGURAS = Path(
 
 PASTA_RESULTADOS.mkdir(parents=True, exist_ok=True)
 PASTA_FIGURAS.mkdir(parents=True, exist_ok=True)
+
+# Saídas adicionais solicitadas para apresentação/reunião.
+PASTA_FIGURAS_BIN1 = PASTA_FIGURAS / "apresentacao_BIN1"
+PASTA_RESULTADOS_BIN1 = PASTA_RESULTADOS / "apresentacao_BIN1"
+PASTA_FIGURAS_BIN1.mkdir(parents=True, exist_ok=True)
+PASTA_RESULTADOS_BIN1.mkdir(parents=True, exist_ok=True)
 
 CLUSTER_COL = f"leiden_{RESOLUCAO}"
 
@@ -181,6 +189,33 @@ def maior_z(linha):
     valor = float(linha.max())
 
     return nome, valor
+
+
+
+# ============================================================
+# FUNÇÕES PARA AS FIGURAS ADICIONAIS DE BIN1
+# ============================================================
+
+def extrair_expressao_gene(adata_obj, gene):
+    """Retorna a expressão em adata.X para um gene, em vetor 1D."""
+    if gene not in adata_obj.var_names:
+        raise KeyError(f"O gene {gene!r} não existe em adata.var_names.")
+
+    x = adata_obj[:, gene].X
+
+    if hasattr(x, "toarray"):
+        valores = x.toarray().ravel()
+    else:
+        valores = np.asarray(x).ravel()
+
+    return valores.astype(float)
+
+
+def ordenar_clusters_numericamente(valores):
+    return sorted(
+        [str(v) for v in valores],
+        key=lambda x: int(x) if str(x).isdigit() else str(x),
+    )
 
 
 # ============================================================
@@ -477,6 +512,314 @@ plt.savefig(
 )
 
 plt.close("all")
+
+
+
+# ============================================================
+# 5.5. FIGURAS ADICIONAIS DE BIN1 PARA APRESENTAÇÃO
+# ============================================================
+#
+# IMPORTANTE:
+# - adata.X neste objeto contém expressão normalizada por CP10k + log1p;
+# - o violin plot e o UMAP são DESCRITIVOS em nível celular;
+# - a regressão de expressão por genótipo usa UMA observação por doador,
+#   evitando pseudorreplicação por células;
+# - na regressão, o genótipo é codificado como dosagem aditiva:
+#       0/0 -> 0
+#       0/1 -> 1
+#       1/1 -> 2
+#   Essa regressão de expressão é uma análise complementar e NÃO muda
+#   o contraste recessivo usado no Milo.
+# ============================================================
+
+print("\n=== Gerando figuras adicionais de BIN1 para apresentação ===")
+
+GENE_BIN1 = "BIN1"
+exp_bin1 = extrair_expressao_gene(adata, GENE_BIN1)
+
+df_bin1 = pd.DataFrame(
+    {
+        "donor_id": adata.obs["donor_id"].astype(str).to_numpy(),
+        "Mutacao_BIN1": adata.obs["Mutacao_BIN1"].astype(str).to_numpy(),
+        "Cluster_Leiden_0_5": adata.obs[CLUSTER_COL].astype(str).to_numpy(),
+        "Estado_Microglial_Biologico": (
+            adata.obs["Estado_Microglial_Biologico"].astype(str).to_numpy()
+        ),
+        "Expressao_BIN1_log1p_CP10k": exp_bin1,
+    },
+    index=adata.obs_names,
+)
+
+# ------------------------------------------------------------
+# A) VIOLIN PLOT — expressão de BIN1 por estado microglial
+# ------------------------------------------------------------
+
+ordem_clusters = ordenar_clusters_numericamente(
+    adata.obs[CLUSTER_COL].astype(str).unique()
+)
+
+ordem_estados = [
+    ANOTACAO_FINAL[c]
+    for c in ordem_clusters
+]
+
+resumo_estado = (
+    df_bin1
+    .groupby(
+        ["Cluster_Leiden_0_5", "Estado_Microglial_Biologico"],
+        observed=True,
+    )
+    .agg(
+        N_celulas=("Expressao_BIN1_log1p_CP10k", "size"),
+        Media=("Expressao_BIN1_log1p_CP10k", "mean"),
+        Mediana=("Expressao_BIN1_log1p_CP10k", "median"),
+        Fracao_expressando=(
+            "Expressao_BIN1_log1p_CP10k",
+            lambda x: float(np.mean(np.asarray(x, dtype=float) > 0)),
+        ),
+    )
+    .reset_index()
+)
+
+resumo_estado.to_csv(
+    PASTA_RESULTADOS_BIN1 / "BIN1_expressao_resumo_por_estado_microglial.csv",
+    index=False,
+)
+
+fig, ax = plt.subplots(figsize=(12, 10))
+
+sns.violinplot(
+    data=df_bin1,
+    y="Estado_Microglial_Biologico",
+    x="Expressao_BIN1_log1p_CP10k",
+    order=ordem_estados,
+    inner="quartile",
+    cut=0,
+    density_norm="width",
+    linewidth=0.8,
+    ax=ax,
+)
+
+ax.set_title(
+    "Expressão normalizada de BIN1 por estado microglial\n"
+    "(CP10k + log1p; visualização descritiva em nível celular)"
+)
+ax.set_xlabel("Expressão normalizada de BIN1 (log1p CP10k)")
+ax.set_ylabel("Estado microglial")
+plt.tight_layout()
+
+plt.savefig(
+    PASTA_FIGURAS_BIN1 / "Violin_BIN1_por_estado_microglial.png",
+    dpi=300,
+    bbox_inches="tight",
+)
+
+plt.close("all")
+
+
+# ------------------------------------------------------------
+# B) EXPRESSÃO DE BIN1 POR GENÓTIPO — donor-level
+#    Scatter + regressão linear da dosagem 0/1/2
+# ------------------------------------------------------------
+
+geno_dosagem = {
+    "0/0": 0,
+    "0/1": 1,
+    "1/1": 2,
+}
+
+donor_geno_n = (
+    df_bin1
+    .groupby("donor_id", observed=True)["Mutacao_BIN1"]
+    .nunique(dropna=False)
+)
+
+if (donor_geno_n != 1).any():
+    raise RuntimeError(
+        "Mutacao_BIN1 não é constante dentro de todos os donor_id."
+    )
+
+df_donor_bin1 = (
+    df_bin1
+    .groupby("donor_id", observed=True)
+    .agg(
+        Mutacao_BIN1=("Mutacao_BIN1", "first"),
+        Expressao_BIN1_media=("Expressao_BIN1_log1p_CP10k", "mean"),
+        Expressao_BIN1_mediana=("Expressao_BIN1_log1p_CP10k", "median"),
+        Fracao_celulas_BIN1_positivo=(
+            "Expressao_BIN1_log1p_CP10k",
+            lambda x: float(np.mean(np.asarray(x, dtype=float) > 0)),
+        ),
+        N_celulas=("Expressao_BIN1_log1p_CP10k", "size"),
+    )
+    .reset_index()
+)
+
+df_donor_bin1["Dosagem_BIN1"] = (
+    df_donor_bin1["Mutacao_BIN1"].map(geno_dosagem)
+)
+
+if df_donor_bin1["Dosagem_BIN1"].isna().any():
+    inesperados = sorted(
+        df_donor_bin1.loc[
+            df_donor_bin1["Dosagem_BIN1"].isna(),
+            "Mutacao_BIN1",
+        ].astype(str).unique()
+    )
+    raise RuntimeError(
+        f"Genótipos BIN1 inesperados para regressão: {inesperados}"
+    )
+
+X_reg = sm.add_constant(
+    df_donor_bin1[["Dosagem_BIN1"]].astype(float),
+    has_constant="add",
+)
+
+y_reg = df_donor_bin1["Expressao_BIN1_media"].astype(float)
+
+modelo = sm.OLS(
+    y_reg,
+    X_reg,
+).fit(
+    cov_type="HC3"
+)
+
+beta = float(modelo.params["Dosagem_BIN1"])
+se_beta = float(modelo.bse["Dosagem_BIN1"])
+p_beta = float(modelo.pvalues["Dosagem_BIN1"])
+intercepto = float(modelo.params["const"])
+r2 = float(modelo.rsquared)
+n_donors_reg = int(len(df_donor_bin1))
+
+pd.DataFrame(
+    [
+        {
+            "Modelo": (
+                "OLS donor-level: expressão média BIN1 ~ dosagem genotípica"
+            ),
+            "Codificacao_genotipo": "0/0=0; 0/1=1; 1/1=2",
+            "N_doadores": n_donors_reg,
+            "Intercepto": intercepto,
+            "Beta_por_alelo": beta,
+            "SE_HC3": se_beta,
+            "PValue_HC3": p_beta,
+            "R2": r2,
+            "Observacao": (
+                "Cada ponto é um doador; erro-padrão/p-valor HC3 robusto."
+            ),
+        }
+    ]
+).to_csv(
+    PASTA_RESULTADOS_BIN1 / "BIN1_regressao_expressao_por_genotipo.csv",
+    index=False,
+)
+
+df_donor_bin1.to_csv(
+    PASTA_RESULTADOS_BIN1 / "BIN1_expressao_donor_level_por_genotipo.csv",
+    index=False,
+)
+
+rng = np.random.default_rng(42)
+x_real = df_donor_bin1["Dosagem_BIN1"].to_numpy(dtype=float)
+x_jitter = x_real + rng.normal(
+    loc=0.0,
+    scale=0.045,
+    size=len(x_real),
+)
+
+fig, ax = plt.subplots(figsize=(8.5, 6.5))
+
+ax.scatter(
+    x_jitter,
+    y_reg.to_numpy(dtype=float),
+    s=45,
+    alpha=0.75,
+)
+
+x_linha = np.linspace(0, 2, 200)
+y_linha = intercepto + beta * x_linha
+
+ax.plot(
+    x_linha,
+    y_linha,
+    linewidth=2,
+)
+
+ax.set_xticks([0, 1, 2])
+ax.set_xticklabels(["0/0", "0/1", "1/1"])
+ax.set_xlabel("Genótipo BIN1 (dosagem do alelo: 0, 1, 2)")
+ax.set_ylabel("Expressão média normalizada de BIN1 por doador")
+ax.set_title(
+    "Expressão de BIN1 por genótipo — regressão linear donor-level"
+)
+
+texto = (
+    f"β por alelo = {beta:.4f}\n"
+    f"SE(HC3) = {se_beta:.4f}\n"
+    f"p = {p_beta:.3e}\n"
+    f"R² = {r2:.3f}\n"
+    f"n = {n_donors_reg} doadores"
+)
+
+ax.text(
+    0.03,
+    0.97,
+    texto,
+    transform=ax.transAxes,
+    va="top",
+    ha="left",
+    bbox={
+        "boxstyle": "round",
+        "facecolor": "white",
+        "alpha": 0.9,
+    },
+)
+
+plt.tight_layout()
+
+plt.savefig(
+    PASTA_FIGURAS_BIN1 / "Scatter_regressao_BIN1_por_genotipo_donor_level.png",
+    dpi=300,
+    bbox_inches="tight",
+)
+
+plt.close("all")
+
+
+# ------------------------------------------------------------
+# C) UMAP — expressão normalizada de BIN1
+# ------------------------------------------------------------
+#
+# O limite superior da escala de cor é visualmente cortado no percentil 99
+# para evitar que poucas células com expressão muito alta comprimam toda a
+# escala. Nenhum valor do AnnData é alterado.
+
+sc.pl.umap(
+    adata,
+    color=GENE_BIN1,
+    use_raw=False,
+    cmap="viridis",
+    vmin=0,
+    vmax="p99",
+    show=False,
+    title=(
+        "UMAP — expressão normalizada de BIN1 "
+        "(CP10k + log1p; escala de cor até p99)"
+    ),
+)
+
+plt.savefig(
+    PASTA_FIGURAS_BIN1 / "UMAP_expressao_normalizada_BIN1.png",
+    dpi=300,
+    bbox_inches="tight",
+)
+
+plt.close("all")
+
+print(
+    "Figuras adicionais de BIN1 salvas em:",
+    PASTA_FIGURAS_BIN1,
+)
 
 
 # ============================================================

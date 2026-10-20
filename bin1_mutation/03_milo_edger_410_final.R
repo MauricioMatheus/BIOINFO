@@ -2,7 +2,7 @@
 # 03_milo_edger_410_final.R
 #
 # MILO FINAL — ETAPA 2
-# edgeR 4.10.x para as três rotas
+# edgeR 4.10.x para seis rotas (3 principais + 3 sensibilidades)
 #
 # EXECUTAR NO AMBIENTE:
 #   conda activate edger_410
@@ -10,7 +10,7 @@
 # O script:
 #   - exige edgeR >= 4.10.0;
 #   - usa exatamente a matriz de 2201 neighborhoods exportada;
-#   - executa as 3 rotas com:
+#   - executa 6 rotas (3 principais da reunião + 3 sensibilidades) com:
 #       robust = TRUE
 #       legacy = FALSE
 #   - usa TMM, estimateDisp, glmQLFit e glmQLFTest;
@@ -84,7 +84,7 @@ if (length(file_arg) == 0) {
 base_dir <- file.path(
     script_dir,
     "results",
-    "milo_final_edger410"
+    "milo_final_edger410_reuniao"
 )
 
 export_dir <- file.path(
@@ -313,6 +313,14 @@ metadata$Age_at_death <- factor(
     )
 )
 
+metadata$Sex <- factor(
+    metadata$Sex,
+    levels = c(
+        "Female",
+        "Male"
+    )
+)
+
 metadata$ADNC <- factor(
     metadata$ADNC,
     levels = c(
@@ -362,14 +370,63 @@ checkpoint(
     "fatores definidos"
 )
 
+cat("\nDistribuição donor-level de Sex:\n")
+print(table(metadata$Sex))
+
+cat("\nModelo recessivo x Sex:\n")
+print(
+    table(
+        metadata$Modelo_Recessivo,
+        metadata$Sex
+    )
+)
+flush.console()
+
 
 # ============================================================
 # 5. ROTAS
 # ============================================================
 
 rotas <- list(
+    # --------------------------------------------------------
+    # ROTAS PRINCIPAIS SOLICITADAS NA REUNIÃO
+    # --------------------------------------------------------
+    RotaG0_BIN1 = list(
+        grupo = "Principal_reuniao",
+        nome = "ROTA G0: BIN1",
+        formula = (
+            ~ Modelo_Recessivo
+            + 0
+        )
+    ),
+    RotaG1_BIN1_Idade_Sexo = list(
+        grupo = "Principal_reuniao",
+        nome = "ROTA G1: BIN1 + IDADE + SEXO",
+        formula = (
+            ~ Modelo_Recessivo
+            + Age_at_death
+            + Sex
+            + 0
+        )
+    ),
+    RotaG2_BIN1_Idade_Sexo_Braak = list(
+        grupo = "Principal_reuniao",
+        nome = "ROTA G2: BIN1 + IDADE + SEXO + BRAAK",
+        formula = (
+            ~ Modelo_Recessivo
+            + Age_at_death
+            + Sex
+            + Braak_stage
+            + 0
+        )
+    ),
+
+    # --------------------------------------------------------
+    # ROTAS ANTERIORES — PRESERVADAS COMO SENSIBILIDADE
+    # --------------------------------------------------------
     Rota0_BIN1_Idade = list(
-        nome = "ROTA 0: BIN1 + IDADE",
+        grupo = "Sensibilidade_anterior",
+        nome = "ROTA S0: BIN1 + IDADE",
         formula = (
             ~ Modelo_Recessivo
             + Age_at_death
@@ -377,7 +434,8 @@ rotas <- list(
         )
     ),
     Rota1_BIN1_Idade_ADNC = list(
-        nome = "ROTA 1: BIN1 + IDADE + ADNC",
+        grupo = "Sensibilidade_anterior",
+        nome = "ROTA S1: BIN1 + IDADE + ADNC",
         formula = (
             ~ Modelo_Recessivo
             + Age_at_death
@@ -386,7 +444,8 @@ rotas <- list(
         )
     ),
     Rota2_BIN1_Idade_Braak_Thal = list(
-        nome = "ROTA 2: BIN1 + IDADE + BRAAK + THAL",
+        grupo = "Sensibilidade_anterior",
+        nome = "ROTA S2: BIN1 + IDADE + BRAAK + THAL",
         formula = (
             ~ Modelo_Recessivo
             + Age_at_death
@@ -396,6 +455,7 @@ rotas <- list(
         )
     )
 )
+
 
 # ============================================================
 # 6. FUNÇÃO DE EXECUÇÃO
@@ -732,6 +792,7 @@ executar_rota <- function(
 
     summary_row <- data.frame(
         Rota = prefixo,
+        Grupo = info$grupo,
         Nome = info$nome,
         N_neighborhoods = nrow(resultado),
         Min_PValue = min(
@@ -775,7 +836,7 @@ executar_rota <- function(
 
 
 # ============================================================
-# 7. EXECUÇÃO DAS 3 ROTAS
+# 7. EXECUÇÃO DAS 6 ROTAS
 # ============================================================
 
 resumos <- list()
@@ -824,5 +885,5 @@ print(
 )
 
 cat("\n============================================================\n")
-cat("ETAPA 2 CONCLUÍDA — AS 3 ROTAS edgeR FORAM SALVAS\n")
+cat("ETAPA 2 CONCLUÍDA — AS 6 ROTAS edgeR FORAM SALVAS\n")
 cat("============================================================\n")
